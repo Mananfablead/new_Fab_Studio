@@ -221,7 +221,7 @@ export const uploadFilesInBatches = async ({
   files,
   groupId,
   onProgress,
-  apiBaseUrl = 'https://fablead-studio.com/services/api'
+  apiBaseUrl = 'https://stag.fablead-studio.com/services/api'
 }: UploadFilesInBatchesParams): Promise<any> => {
   const BATCH_SIZE = 10;
   const totalFiles = files.length;

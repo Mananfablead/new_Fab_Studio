@@ -523,7 +523,7 @@ export default function ChatBot() {
       }
 
       // Submit contact form via API
-      const response = await fetch('https://fablead-studio.com/services/api/contact-us', {
+      const response = await fetch('https://stag.fablead-studio.com/services/api/contact-us', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

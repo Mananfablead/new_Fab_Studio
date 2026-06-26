@@ -16,6 +16,7 @@ import { fetchGroups } from '@/store/slices/groupsSlice';
 import { selectActivePlan, selectPlansLoading } from '@/store/selectors';
 import { useUserPlans } from '@/hooks/useUserPlans';
 import SubscriptionPlansModal from '@/components/modals/SubscriptionPlansModal';
+import AddFeaturesModal from '@/components/modals/AddFeaturesModal';
 import api from '@/services/api';
 
 // Custom Button Component with hover animation
@@ -109,6 +110,7 @@ export default function BusinessSettings() {
 
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPlansModal, setShowPlansModal] = useState(false);
+  const [showAddFeaturesModal, setShowAddFeaturesModal] = useState(false);
   const [isResizeEnabled, setIsResizeEnabled] = useState(true);
   const [storageData, setStorageData] = useState<{
     usedBytes: number;
@@ -545,12 +547,20 @@ export default function BusinessSettings() {
                       </div>
                     )}
 
-                    <button
-                      onClick={() => setShowPlansModal(true)}
-                      className="w-full py-2.5 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
-                    >
-                      {isPlanActive ? 'Change Plan' : 'Explore All Plans'}
-                    </button>
+                    <div className="flex items-center gap-3 w-full">
+                      <button
+                        onClick={() => setShowPlansModal(true)}
+                        className="flex-1 py-2.5 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
+                      >
+                        {isPlanActive ? 'Change Plan' : 'Explore All Plans'}
+                      </button>
+                      <button
+                        onClick={() => setShowAddFeaturesModal(true)}
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white text-sm font-medium hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+                      >
+                        Upgrade Plan
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -624,6 +634,11 @@ export default function BusinessSettings() {
       <SubscriptionPlansModal
         open={showPlansModal}
         onOpenChange={setShowPlansModal}
+      />
+      <AddFeaturesModal
+        open={showAddFeaturesModal}
+        onOpenChange={setShowAddFeaturesModal}
+        plan={apiPlan as any}
       />
     </div>
   );

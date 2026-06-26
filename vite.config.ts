@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     // proxy: {
     //   "/api": {
-    //     target: "https://fablead-studio.com/services",
+    //     target: "https://stag.fablead-studio.com/services",
     //     changeOrigin: true,
     //     secure: false,
     //     rewrite: (path) => path.replace(/^\/api/, "/api"),
@@ -27,5 +27,5 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
-  
+
 }));

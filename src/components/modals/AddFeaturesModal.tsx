@@ -110,42 +110,32 @@ export default function AddFeaturesModal({ open, onOpenChange, plan }: AddFeatur
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-y-auto p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:text-white [&>button]:hover:text-[hsl(var(--fab-amber))] [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:transition-colors [&>button]:z-50 [&>button]:right-6 [&>button]:top-6 sm:[&>button]:right-6 sm:[&>button]:top-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-h-[95dvh] sm:max-h-[90vh]">
-        <div className="bg-white rounded-2xl shadow-2xl m-4 sm:m-0">
+      <DialogContent className="max-w-2xl p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:text-white [&>button]:hover:text-[hsl(var(--fab-amber))] [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:transition-colors [&>button]:z-50 [&>button]:right-4 [&>button]:top-4 sm:[&>button]:right-4 sm:[&>button]:top-4">
+        <div className="bg-white rounded-2xl shadow-2xl m-4 sm:m-0 flex flex-col overflow-hidden max-h-[95dvh] sm:max-h-[90vh]">
           {/* Header */}
-          <div className="relative px-8 pt-8 pb-6 text-center bg-gradient-to-br from-[hsl(var(--fab-navy))] to-[hsl(var(--fab-navy))]/90 rounded-t-2xl">
+          <div className="relative px-6 py-5 shrink-0 text-center bg-gradient-to-br from-[hsl(var(--fab-navy))] to-[hsl(var(--fab-navy))]/90">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[hsl(var(--fab-amber))]/15 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
             <div className="relative z-10">
-              <DialogTitle className="text-2xl font-bold font-heading text-white mb-1.5">
-                Checkout
+              <DialogTitle className="text-xl font-bold font-heading text-white mb-0.5">
+                {plan ? `Checkout - ${plan.name} Plan` : 'Checkout'}
               </DialogTitle>
-              <DialogDescription className="text-white/70 text-sm font-medium">
-                Review your plan and select add-ons
+              <DialogDescription className="text-white/70 text-xs font-medium flex items-center justify-center gap-2 mt-1">
+                {plan && (
+                  <>
+                    <span>Base Price: ₹{Number(plan.price || 0).toLocaleString('en-IN')}</span>
+                    <span className="w-1 h-1 rounded-full bg-white/30" />
+                  </>
+                )}
+                <span>Review and select add-ons</span>
               </DialogDescription>
             </div>
           </div>
 
           {/* List Body */}
-          <div className="p-8">
+          <div className="p-8 overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div className="flex flex-col">
             
-            {/* Selected Plan Summary */}
-            {plan && (
-              <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-6 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[hsl(var(--fab-amber))]/10 flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-[hsl(var(--fab-amber))]" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">Selected Plan: {plan.name}</h4>
-                    <p className="text-xs text-slate-500 mt-0.5">Base subscription</p>
-                  </div>
-                </div>
-                <div className="font-bold text-slate-800 text-lg">
-                  ₹{Number(plan.price || 0).toLocaleString('en-IN')}
-                </div>
-              </div>
-            )}
+            {/* Selected Plan Summary removed and moved to Header */}
 
             <div className="mb-6">
               <h3 className="text-xl font-bold font-heading text-slate-800">Available Add-ons</h3>
@@ -272,38 +262,20 @@ export default function AddFeaturesModal({ open, onOpenChange, plan }: AddFeatur
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 px-8 py-6 bg-white border-t border-slate-100 flex flex-col gap-5 shrink-0 rounded-b-2xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] z-50">
-          
-          {/* Price Breakdown */}
-          {plan && (
-            <div className="flex items-center justify-between px-2 text-sm">
-              <span className="text-slate-500 font-medium">
-                Plan (₹{Number(plan.price || 0).toLocaleString('en-IN')}) {totalPrice > 0 ? `+ Add-ons (₹${totalPrice.toLocaleString('en-IN')})` : ''}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 font-medium uppercase text-xs tracking-wider">Total</span>
-                <span className="font-bold text-slate-800 text-xl">
-                  ₹{(Number(plan.price || 0) + totalPrice).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-4">
-            <Button 
-              variant="outline" 
-              className="flex-1 py-6 rounded-xl font-semibold text-slate-500 border-slate-200 bg-white hover:bg-slate-50 hover:text-slate-700 transition-all text-[15px]"
-              onClick={() => onOpenChange(false)}
-            >
-              Skip 
-            </Button>
-            <Button 
-              className="flex-[2] py-6 rounded-xl font-semibold text-[15px] bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 transition-all"
-              onClick={handleAddFeatures}
-            >
-              Proceed to Checkout
-            </Button>
-          </div>
+        <div className="px-8 py-5 bg-white border-t border-slate-100 flex gap-4 shrink-0 z-50">
+          <Button 
+            variant="outline" 
+            className="flex-1 py-6 rounded-xl font-semibold text-slate-500 border-slate-200 bg-white hover:bg-slate-50 hover:text-slate-700 transition-all text-[15px]"
+            onClick={() => onOpenChange(false)}
+          >
+            Skip 
+          </Button>
+          <Button 
+            className="flex-[2] py-6 rounded-xl font-semibold text-[15px] bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+            onClick={handleAddFeatures}
+          >
+            Proceed to Checkout {plan ? ` - ₹${(Number(plan.price || 0) + totalPrice).toLocaleString('en-IN')}` : ''}
+          </Button>
         </div>
         </div>
       </DialogContent>

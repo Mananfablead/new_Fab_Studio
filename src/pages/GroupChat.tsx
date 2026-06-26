@@ -112,6 +112,8 @@ export default function GroupChat() {
   }, [groupId]);
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     const fetchMessages = async () => {
       if (selectedParticipant) {
         try {
@@ -124,13 +126,30 @@ export default function GroupChat() {
             sender_id: msg.sender_id,
             receiver_id: msg.receiver_id
           }));
-          setMessages(formattedMessages);
+          
+          setMessages(prev => {
+            // Only update if there's a difference to avoid resetting scroll position unnecessarily
+            if (prev.length !== formattedMessages.length) return formattedMessages;
+            if (prev.length > 0 && prev[prev.length - 1].id !== formattedMessages[formattedMessages.length - 1].id) {
+              return formattedMessages;
+            }
+            return prev;
+          });
         } catch (error) {
           console.error('Error fetching messages:', error);
         }
       }
     };
+
     fetchMessages();
+    
+    if (selectedParticipant) {
+      intervalId = setInterval(fetchMessages, 3000); // Poll every 3 seconds
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [selectedParticipant]);
 
   return (
@@ -332,6 +351,7 @@ export default function GroupChat() {
                 </div>
               )}
               <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                {/* 
                 <input 
                   type="file"
                   ref={fileInputRef}
@@ -347,6 +367,7 @@ export default function GroupChat() {
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
+                */}
                 <input 
                   type="text" 
                   value={messageInput}
