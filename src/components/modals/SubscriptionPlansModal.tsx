@@ -341,7 +341,12 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
 
                             {/* Capabilities */}
                             <ul className="space-y-2.5 mb-6 flex-1">
-                              {capabilities.map((cap, i) => {
+                              {capabilities
+                                .filter(cap => {
+                                  const isBool = typeof cap.value === 'boolean';
+                                  return !isBool || cap.value === true;
+                                })
+                                .map((cap, i) => {
                                 const isBool = typeof cap.value === 'boolean';
                                 const isProvided = isBool ? cap.value : true;
 
@@ -436,6 +441,7 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
       <AddFeaturesModal
         open={addFeaturesOpen}
         onOpenChange={handleAddFeaturesOpenChange}
+        plan={selectedPlan}
       />
     </>
   );

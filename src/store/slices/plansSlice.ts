@@ -18,6 +18,13 @@ export interface Plan {
   max_team_members?: number;
   has_custom_watermark?: boolean;
   has_face_recognition?: boolean;
+  has_bulk_download?: boolean;
+  has_business_branding?: boolean;
+  has_digital_album?: boolean;
+  has_portfolio_website?: boolean;
+  has_switch_downloads?: boolean;
+  has_team_login?: boolean;
+  has_view_client_favorites?: boolean;
   // Legacy / generic
   features?: string[] | Record<string, any>;
   icon?: string;
