@@ -1,0 +1,273 @@
+--- src/components/modals/AddFeaturesModal.tsx
++++ src/components/modals/AddFeaturesModal.tsx
+@@ -1,9 +1,10 @@
+ import { useState } from 'react';
+-import { Sparkles, Check, Package, Database, Brain, Globe, Eye, Zap } from 'lucide-react';
++import { Sparkles, Check, Package, Database, Brain, Globe, Eye, Zap, Image as ImageIcon, Video, CalendarDays } from 'lucide-react';
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+ import { Button } from '@/components/ui/button';
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+ 
+ interface Feature {
+   id: string;
+   name: string;
+-  price: string;
++  price: number;
+   description: string;
+   icon: string;
+   color: string;
+@@ -16,21 +17,35 @@
+ 
+-const addOnFeatures: Feature[] = [
++const addonOptions = {
++  photos: [
++    { value: 'none', label: 'No Extra Photos', price: 0 },
++    { value: '1000', label: '+1,000 Photos', price: 99 },
++    { value: '5000', label: '+5,000 Photos', price: 399 },
++    { value: '10000', label: '+10,000 Photos', price: 699 },
++  ],
++  videos: [
++    { value: 'none', label: 'No Extra Videos', price: 0 },
++    { value: '10', label: '+10 Videos', price: 199 },
++    { value: '50', label: '+50 Videos', price: 799 },
++    { value: '100', label: '+100 Videos', price: 1299 },
++  ],
++  storage: [
++    { value: 'none', label: 'No Extra Storage', price: 0 },
++    { value: '10', label: '+10GB Storage', price: 199 },
++    { value: '50', label: '+50GB Storage', price: 799 },
++    { value: '100', label: '+100GB Storage', price: 1299 },
++  ],
++  events: [
++    { value: 'none', label: 'No Extra Events', price: 0 },
++    { value: '5', label: '+5 Events', price: 299 },
++    { value: '15', label: '+15 Events', price: 699 },
++    { value: '30', label: '+30 Events', price: 1199 },
++  ],
++};
++
++const toggleFeatures: Feature[] = [
+   { 
+-    id: 'storage-10', 
+-    name: 'Extra Storage 10GB', 
+-    price: '₹199', 
+-    description: 'Add 10GB more storage to your plan',
+-    icon: 'database',
+-    color: 'from-blue-500 to-cyan-500',
+-  },
+-  { 
+-    id: 'storage-50', 
+-    name: 'Extra Storage 50GB', 
+-    price: '₹799', 
+-    description: 'Add 50GB more storage to your plan',
+-    icon: 'database',
+-    color: 'from-indigo-500 to-purple-500',
+-  },
+-  { 
+     id: 'ai-credits', 
+     name: 'AI Recognition Credits', 
+-    price: '₹499', 
++    price: 499, 
+     description: 'Additional 10,000 AI face recognitions',
+     icon: 'brain',
+@@ -40,3 +55,3 @@
+     name: 'Custom Domain', 
+-    price: '₹299', 
++    price: 299, 
+     description: 'Use your own domain for galleries',
+@@ -46,3 +61,3 @@
+     name: 'Remove Branding', 
+-    price: '₹199', 
++    price: 199, 
+     description: 'Remove fab-photo branding from galleries',
+@@ -52,3 +67,3 @@
+     name: 'Priority Delivery', 
+-    price: '₹399', 
++    price: 399, 
+     description: 'Faster photo delivery with CDN boost',
+@@ -79,15 +94,22 @@
+ 
+ export default function AddFeaturesModal({ open, onOpenChange }: AddFeaturesModalProps) {
+-  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
++  const [dropdowns, setDropdowns] = useState({
++    photos: 'none',
++    videos: 'none',
++    storage: 'none',
++    events: 'none'
++  });
++  
++  const [toggles, setToggles] = useState<Record<string, boolean>>({});
+ 
+-  const handleAddFeature = () => {
+-    if (selectedFeature) {
+-      console.log('Adding feature:', selectedFeature);
+-      onOpenChange(false);
+-      setSelectedFeature(null);
+-    }
++  const handleAddFeatures = () => {
++    console.log('Adding features:', { dropdowns, toggles });
++    onOpenChange(false);
++    setDropdowns({ photos: 'none', videos: 'none', storage: 'none', events: 'none' });
++    setToggles({});
+   };
+ 
++  const totalDropdowns = Object.entries(dropdowns).reduce((acc, [key, val]) => {
++    const option = addonOptions[key as keyof typeof addonOptions].find(o => o.value === val);
++    return acc + (option ? option.price : 0);
++  }, 0);
++
++  const totalToggles = toggleFeatures.reduce((acc, feat) => {
++    return acc + (toggles[feat.id] ? feat.price : 0);
++  }, 0);
++
++  const totalPrice = totalDropdowns + totalToggles;
++
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0 border-0 bg-transparent shadow-none scrollbar-hide [&>button]:text-white [&>button]:hover:text-[hsl(var(--fab-amber))] [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:transition-colors [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
++      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-0 bg-transparent shadow-none scrollbar-hide [&>button]:text-white [&>button]:hover:text-[hsl(var(--fab-amber))] [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:transition-colors [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+         {/* Glass Card */}
+@@ -118,22 +140,84 @@
+ 
+-          {/* Features List */}
+-          <div className="p-6 space-y-3">
+-            {addOnFeatures.map((feature) => (
++          <div className="p-6 space-y-6">
++            {/* Dropdown Options */}
++            <div className="space-y-4">
++              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Resource Limits</h3>
++              
++              {/* Photos Dropdown */}
++              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
++                <div className="flex items-center gap-3">
++                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
++                    <ImageIcon className="w-4 h-4 text-white" />
++                  </div>
++                  <div>
++                    <p className="font-semibold text-sm">Photos</p>
++                  </div>
++                </div>
++                <Select value={dropdowns.photos} onValueChange={(v) => setDropdowns(prev => ({...prev, photos: v}))}>
++                  <SelectTrigger className="w-[180px] bg-white">
++                    <SelectValue placeholder="Select limit" />
++                  </SelectTrigger>
++                  <SelectContent>
++                    {addonOptions.photos.map(opt => (
++                      <SelectItem key={opt.value} value={opt.value}>{opt.label} {opt.price ? `(₹${opt.price})` : ''}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++
++              {/* Videos Dropdown */}
++              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
++                <div className="flex items-center gap-3">
++                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-md">
++                    <Video className="w-4 h-4 text-white" />
++                  </div>
++                  <div>
++                    <p className="font-semibold text-sm">Videos</p>
++                  </div>
++                </div>
++                <Select value={dropdowns.videos} onValueChange={(v) => setDropdowns(prev => ({...prev, videos: v}))}>
++                  <SelectTrigger className="w-[180px] bg-white">
++                    <SelectValue placeholder="Select limit" />
++                  </SelectTrigger>
++                  <SelectContent>
++                    {addonOptions.videos.map(opt => (
++                      <SelectItem key={opt.value} value={opt.value}>{opt.label} {opt.price ? `(₹${opt.price})` : ''}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++
++              {/* Storage Dropdown */}
++              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
++                <div className="flex items-center gap-3">
++                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md">
++                    <Database className="w-4 h-4 text-white" />
++                  </div>
++                  <div>
++                    <p className="font-semibold text-sm">Storage</p>
++                  </div>
++                </div>
++                <Select value={dropdowns.storage} onValueChange={(v) => setDropdowns(prev => ({...prev, storage: v}))}>
++                  <SelectTrigger className="w-[180px] bg-white">
++                    <SelectValue placeholder="Select limit" />
++                  </SelectTrigger>
++                  <SelectContent>
++                    {addonOptions.storage.map(opt => (
++                      <SelectItem key={opt.value} value={opt.value}>{opt.label} {opt.price ? `(₹${opt.price})` : ''}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++
++              {/* Events Dropdown */}
++              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
++                <div className="flex items-center gap-3">
++                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md">
++                    <CalendarDays className="w-4 h-4 text-white" />
++                  </div>
++                  <div>
++                    <p className="font-semibold text-sm">Events</p>
++                  </div>
++                </div>
++                <Select value={dropdowns.events} onValueChange={(v) => setDropdowns(prev => ({...prev, events: v}))}>
++                  <SelectTrigger className="w-[180px] bg-white">
++                    <SelectValue placeholder="Select limit" />
++                  </SelectTrigger>
++                  <SelectContent>
++                    {addonOptions.events.map(opt => (
++                      <SelectItem key={opt.value} value={opt.value}>{opt.label} {opt.price ? `(₹${opt.price})` : ''}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++            </div>
++
++            {/* Other Features */}
++            <div className="space-y-3">
++              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Other Add-ons</h3>
++              {toggleFeatures.map((feature) => (
+               <button
+                 key={feature.id}
+-                onClick={() => setSelectedFeature(feature.id)}
++                onClick={() => setToggles(prev => ({ ...prev, [feature.id]: !prev[feature.id] }))}
+                 className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-300 group ${
+-                  selectedFeature === feature.id
++                  toggles[feature.id]
+                     ? 'border-[hsl(var(--fab-amber))] bg-[hsl(var(--fab-amber))]/5 shadow-lg'
+@@ -147,3 +231,3 @@
+                     <div className="flex items-center justify-between gap-2">
+                       <p className="font-semibold text-sm truncate">{feature.name}</p>
+-                      <span className="text-sm font-bold text-[hsl(var(--fab-amber))] shrink-0">{feature.price}</span>
++                      <span className="text-sm font-bold text-[hsl(var(--fab-amber))] shrink-0">₹{feature.price}</span>
+                     </div>
+@@ -153,6 +237,6 @@
+                   {/* Check */}
+                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+-                    selectedFeature === feature.id
++                    toggles[feature.id]
+                       ? 'border-[hsl(var(--fab-amber))] bg-[hsl(var(--fab-amber))]'
+                       : 'border-muted-foreground/30'
+                   }`}>
+-                    {selectedFeature === feature.id && <Check className="w-3.5 h-3.5 text-white" />}
++                    {toggles[feature.id] && <Check className="w-3.5 h-3.5 text-white" />}
+                   </div>
+@@ -161,2 +245,3 @@
+             ))}
++            </div>
+           </div>
+@@ -172,6 +257,6 @@
+               </Button>
+               <Button 
+-                className="flex-1 py-5 rounded-xl font-semibold bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 disabled:opacity-50"
+-                disabled={!selectedFeature}
+-                onClick={handleAddFeature}
++                className="flex-1 py-5 rounded-xl font-semibold bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25"
++                onClick={handleAddFeatures}
+               >
+-                Add Feature
++                {totalPrice > 0 ? `Pay ₹${totalPrice}` : 'Continue'}
+               </Button>
