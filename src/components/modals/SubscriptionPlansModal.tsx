@@ -214,6 +214,7 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
 
   const [addFeaturesOpen, setAddFeaturesOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [selectedPlanIsActive, setSelectedPlanIsActive] = useState(false);
   const hasPlansForRole = hasResolvedRole && plansRole === resolvedRole;
   const visiblePlans = hasPlansForRole ? plans : [];
   const isLoadingPlansForRole = loading || (open && !hasResolvedRole) || (open && !hasPlansForRole);
@@ -224,9 +225,9 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
     }
   }, [open, dispatch, hasPlansForRole, hasResolvedRole, resolvedRole]);
 
-  const handleSelectPlan = (plan: Plan) => {
-    if (isPlanPurchased && String(plan.id) === String(purchasedPlanId ?? activePlan?.id)) return;
+  const handleSelectPlan = (plan: Plan, isActive: boolean) => {
     setSelectedPlan(plan);
+    setSelectedPlanIsActive(isActive);
     setAddFeaturesOpen(true);
   };
 
@@ -386,11 +387,11 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
                             {/* CTA */}
                             <Button
                               className={`w-full py-5 rounded-xl font-semibold transition-all ${isActive
-                                  ? 'bg-muted text-muted-foreground cursor-default'
+                                  ? 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
                                   : 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
                                 }`}
-                              disabled={isActive || !!selectingPlanId}
-                              onClick={() => handleSelectPlan(plan)}
+                              disabled={!!selectingPlanId}
+                              onClick={() => handleSelectPlan(plan, isActive)}
                             >
                               {isSelecting ? (
                                 <span className="flex items-center gap-2">
@@ -398,7 +399,7 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
                                   Processing…
                                 </span>
                               ) : isActive ? (
-                                'Active Plan'
+                                'Add More Features'
                               ) : (
                                 'Choose Plan'
                               )}
@@ -442,6 +443,7 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
         open={addFeaturesOpen}
         onOpenChange={handleAddFeaturesOpenChange}
         plan={selectedPlan}
+        isActivePlan={selectedPlanIsActive}
       />
     </>
   );

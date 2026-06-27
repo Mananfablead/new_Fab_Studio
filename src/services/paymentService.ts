@@ -5,13 +5,8 @@ import api from '@/services/api';
 export interface CreateOrderPayload {
   amount: number; // amount in INR — backend handles paise conversion
   plan_id?: string | number;
-  addons?: {
-    photos?: string;
-    videos?: string;
-    storage?: string;
-    events?: string;
-    features?: string[];
-  };
+  feature_id?: number[];
+  addons_id?: number[];
 }
 
 export interface CreateOrderResponse {
@@ -43,6 +38,15 @@ export interface Transaction {
   razorpay_payment_id?: string;
   razorpay_order_id?: string;
   description?: string;
+  plan_id?: number | null;
+  features?: any[] | null;
+  addons_id?: any[] | null;
+  plan?: {
+    id: number;
+    name: string;
+    price: number;
+    currency: string;
+  } | null;
 }
 
 // ─── API Calls ────────────────────────────────────────────────────────────────

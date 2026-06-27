@@ -35,6 +35,7 @@ import PortfolioSettings from "./pages/settings/PortfolioSettings";
 import PortfolioPage from "./pages/PortfolioPage";
 import WalletPage from "./pages/settings/WalletPage";
 import TransactionsPage from "./pages/settings/TransactionsPage";
+import InvoiceDetailsPage from "./pages/settings/InvoiceDetailsPage";
 import PrivacySecurityPage from "./pages/PrivacySecurityPage";
 import GroupChat from "./pages/GroupChat";
 import GroupSettings from "./pages/GroupSettings";
@@ -461,6 +462,7 @@ function AppRoutes() {
         <Route path="portfolio" element={<PortfolioSettings />} />
         <Route path="wallet" element={<WalletPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
+        <Route path="transactions/:transactionId" element={<InvoiceDetailsPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

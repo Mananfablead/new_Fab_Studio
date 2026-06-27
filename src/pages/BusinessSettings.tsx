@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   User, Settings, Briefcase, Users, BookImage, Droplets, Globe, Wallet, Receipt,
   ChevronRight, Sparkles, Shield, Bell, Palette, CreditCard, FolderOpen,
-  ArrowLeft, Eye, Loader2, Crop, AlertTriangle
+  ArrowLeft, Eye, Loader2, Crop, AlertTriangle, CheckCircle2, Clock, XCircle
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import AppHeader from '@/components/AppHeader';
@@ -19,6 +19,8 @@ import SubscriptionPlansModal from '@/components/modals/SubscriptionPlansModal';
 import AddFeaturesModal from '@/components/modals/AddFeaturesModal';
 import api from '@/services/api';
 import { toast } from 'sonner';
+import { fetchTransactions } from '@/services/paymentService';
+import type { Transaction } from '@/services/paymentService';
 
 // Custom Button Component with hover animation
 function AnimatedButton({ children, onClick, className = '' }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
@@ -51,6 +53,7 @@ const settingsCategories = [
       { label: 'Profile', icon: User, path: '/settings/profile', desc: 'Personal info & security', color: 'bg-blue-500/10 text-blue-500' },
       // { label: 'Preferences', icon: Settings, path: '/settings/preferences', desc: 'App settings & notifications', color: 'bg-purple-500/10 text-purple-500' },
       { label: 'Team', icon: Users, path: '/settings/team', desc: 'Manage team members & roles', color: 'bg-green-500/10 text-green-500' },
+      { label: 'Transactions', icon: Receipt, path: '/settings/transactions', desc: 'Invoice history & payments', color: 'bg-orange-500/10 text-orange-500' },
     ]
   },
   {
@@ -112,6 +115,7 @@ export default function BusinessSettings() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showAddFeaturesModal, setShowAddFeaturesModal] = useState(false);
+  const [showPlanDetailsModal, setShowPlanDetailsModal] = useState(false);
   const [isResizeEnabled, setIsResizeEnabled] = useState(true);
   const [canManagePhotoResize, setCanManagePhotoResize] = useState(true);
   const [storageData, setStorageData] = useState<{
@@ -146,6 +150,8 @@ export default function BusinessSettings() {
       setIsResizeEnabled(!checked);
     }
   };
+
+
 
   // Fetch plans on mount
   const activePlan = useAppSelector(selectActivePlan);
@@ -426,7 +432,13 @@ export default function BusinessSettings() {
               {/* Active Plan */}
               <div
                 className="bg-card rounded-xl border border-border fab-shadow p-4 flex items-center gap-4 cursor-pointer hover:border-purple-400 hover:shadow-md transition-all"
-                onClick={() => setShowPlansModal(true)}
+                onClick={() => {
+                  if (apiPlan && isPlanActive) {
+                    setShowPlanDetailsModal(true);
+                  } else {
+                    setShowPlansModal(true);
+                  }
+                }}
               >
                 <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-purple-500" />
@@ -579,6 +591,8 @@ export default function BusinessSettings() {
                         Upgrade Plan
                       </button>
                     </div>
+
+
                   </div>
                 </div>
               </div>
@@ -658,6 +672,119 @@ export default function BusinessSettings() {
         onOpenChange={setShowAddFeaturesModal}
         plan={apiPlan as any}
       />
+
+      {/* Active Plan Details Modal */}
+      {showPlanDetailsModal && apiPlan && isPlanActive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowPlanDetailsModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="relative px-6 py-6 bg-gradient-to-br from-[#121212] to-[#242424] text-white">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Sparkles className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs font-medium uppercase tracking-widest">Active Plan</p>
+                      <h3 className="text-xl font-heading font-bold text-white">{apiPlan.name}</h3>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-lg text-xs font-bold bg-[hsl(var(--fab-amber))] text-[hsl(var(--fab-navy))] uppercase tracking-wide">
+                    Active
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="text-2xl font-black text-white">
+                    {typeof apiPlan.price === 'number' ? `${apiPlan.currency}${apiPlan.price.toLocaleString('en-IN')}` : apiPlan.price}
+                  </span>
+                  <span className="text-white/50 text-sm font-medium">/year</span>
+                </div>
+                {userPlansData?.data?.user?.plan_expires_at && (
+                  <p className="text-white/40 text-xs mt-1">Expires: {new Date(userPlansData.data.user.plan_expires_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+              {/* Plan Limits */}
+              <div>
+                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Plan Limits</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Photos</p>
+                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_photos ? (apiPlan as any).max_photos.toLocaleString('en-IN') : 'N/A'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Videos</p>
+                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_videos || 'N/A'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
+                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_storage_bytes ? formatBytes((apiPlan as any).max_storage_bytes) : 'N/A'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Events</p>
+                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_events || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features Enabled */}
+              <div>
+                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Features Included</h4>
+                <div className="flex flex-wrap gap-2">
+                  {(apiPlan as any).has_custom_watermark && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Custom Watermark</span>
+                  )}
+                  {(apiPlan as any).has_face_recognition && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Face Recognition</span>
+                  )}
+                  {(apiPlan as any).has_bulk_download && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Bulk Download</span>
+                  )}
+                  {(apiPlan as any).has_business_branding && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Business Branding</span>
+                  )}
+                  {(apiPlan as any).has_switch_downloads && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Switch Downloads</span>
+                  )}
+                  {(apiPlan as any).has_portfolio_website && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Portfolio Website</span>
+                  )}
+                  {(apiPlan as any).has_team_login && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Team Login</span>
+                  )}
+                  {(apiPlan as any).has_view_client_favorites && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Client Favorites</span>
+                  )}
+                  {(apiPlan as any).has_digital_album && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Digital Flipbook</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => { setShowPlanDetailsModal(false); setShowPlansModal(true); }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 transition-colors"
+              >
+                Change Plan
+              </button>
+              <button
+                onClick={() => { setShowPlanDetailsModal(false); setShowAddFeaturesModal(true); }}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white text-sm font-bold hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+              >
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
