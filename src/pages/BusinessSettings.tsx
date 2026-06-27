@@ -18,6 +18,7 @@ import { useUserPlans } from '@/hooks/useUserPlans';
 import SubscriptionPlansModal from '@/components/modals/SubscriptionPlansModal';
 import AddFeaturesModal from '@/components/modals/AddFeaturesModal';
 import api from '@/services/api';
+import { toast } from 'sonner';
 
 // Custom Button Component with hover animation
 function AnimatedButton({ children, onClick, className = '' }: { children: React.ReactNode; onClick?: () => void; className?: string }) {
@@ -112,6 +113,7 @@ export default function BusinessSettings() {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showAddFeaturesModal, setShowAddFeaturesModal] = useState(false);
   const [isResizeEnabled, setIsResizeEnabled] = useState(true);
+  const [canManagePhotoResize, setCanManagePhotoResize] = useState(true);
   const [storageData, setStorageData] = useState<{
     usedBytes: number;
     limitBytes: number;
@@ -121,16 +123,26 @@ export default function BusinessSettings() {
   const [storageLoading, setStorageLoading] = useState(true);
 
   const handleToggleResize = async (checked: boolean) => {
+    if (!canManagePhotoResize) {
+      toast.error('Photo resize settings are managed by admin for your account.');
+      return;
+    }
     setIsResizeEnabled(checked);
     try {
-      await api.put('/users/settings', {
+      const response: any = await api.put('/users/settings', {
         settings: {
           resize_photo_images: checked,
           resize_photo_max_size_mb: 2.5
         }
       });
-    } catch (error) {
+      
+      if (response && response.success === false) {
+        toast.error(response.message || 'Failed to update settings');
+        setIsResizeEnabled(!checked);
+      }
+    } catch (error: any) {
       console.error('Failed to update resize setting:', error);
+      toast.error(error?.response?.data?.message || error.message || 'Failed to update settings');
       setIsResizeEnabled(!checked);
     }
   };
@@ -204,8 +216,14 @@ export default function BusinessSettings() {
 
         if (body?.stats?.settings?.resize_photo_images !== undefined) {
           setIsResizeEnabled(Boolean(body.stats.settings.resize_photo_images));
+          if (body.stats.settings.can_manage_photo_resize !== undefined) {
+            setCanManagePhotoResize(Boolean(body.stats.settings.can_manage_photo_resize));
+          }
         } else if (body?.data?.stats?.settings?.resize_photo_images !== undefined) {
           setIsResizeEnabled(Boolean(body.data.stats.settings.resize_photo_images));
+          if (body.data.stats.settings.can_manage_photo_resize !== undefined) {
+            setCanManagePhotoResize(Boolean(body.data.stats.settings.can_manage_photo_resize));
+          }
         }
       } catch (err) {
         console.error('[BusinessSettings] dashboard/stats failed:', err);

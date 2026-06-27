@@ -52,8 +52,17 @@ export interface Transaction {
  * POST /payments/create-order
  */
 export const createOrder = async (payload: CreateOrderPayload): Promise<CreateOrderResponse> => {
-  const response = await api.post<CreateOrderResponse>('/payments/create-order', payload);
-  return response.data;
+  const response = await api.post('/payments/create-order', payload);
+  console.log('Create order response:', response.data);
+  // Extract id gracefully regardless of backend wrapper (e.g. { data: { id: ... } } or { order_id: ... })
+  const data = response.data;
+  const orderData = data.data || data.order || data;
+  const id = orderData.id || orderData.order_id || orderData.razorpay_order_id;
+  
+  return {
+    ...orderData,
+    id, // Ensure id is populated for the frontend to use
+  };
 };
 
 /**
@@ -108,6 +117,20 @@ export const openRazorpayCheckout = (options: RazorpayCheckoutOptions): void => 
     console.error('Razorpay SDK not loaded. Ensure the script tag is in index.html.');
     return;
   }
+
+  // Inject CSS to fix Radix UI / Shadcn Dialog blocking pointer events on Razorpay container
+  if (!document.getElementById('rzp-radix-fix')) {
+    const style = document.createElement('style');
+    style.id = 'rzp-radix-fix';
+    style.innerHTML = `
+      .razorpay-container {
+        pointer-events: auto !important;
+        z-index: 2147483647 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
 
   const rzp = new window.Razorpay({
     key: import.meta.env.VITE_RAZORPAY_KEY_ID,
