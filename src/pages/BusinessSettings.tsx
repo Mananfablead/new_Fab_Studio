@@ -3,7 +3,9 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   User, Settings, Briefcase, Users, BookImage, Droplets, Globe, Wallet, Receipt,
   ChevronRight, Sparkles, Shield, Bell, Palette, CreditCard, FolderOpen,
-  ArrowLeft, Eye, Loader2, Crop, AlertTriangle, CheckCircle2, Clock, XCircle
+  ArrowLeft, Eye, Loader2, Crop, AlertTriangle, CheckCircle2,
+  XCircle,
+  Copy
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import AppHeader from '@/components/AppHeader';
@@ -73,16 +75,16 @@ const settingsCategories = [
     items: [
       { label: 'Flipbook', icon: BookImage, path: '/settings/flipbook', desc: 'Album display settings', color: 'bg-indigo-500/10 text-indigo-500' },
       { label: 'Watermark', icon: Droplets, path: '/settings/watermark', desc: 'Protect your photos', color: 'bg-cyan-500/10 text-cyan-500' },
-      { 
-        label: 'Upload in Higher Resolution', 
-        icon: Crop, 
+      {
+        label: 'Upload in Higher Resolution',
+        icon: Crop,
         desc: (
           <span className="flex items-center gap-1 text-[#b54c4c] mt-0.5">
             <AlertTriangle className="w-3.5 h-3.5" /> 1 High resolution Upload = 2.5 Photos
           </span>
-        ), 
-        color: 'bg-teal-500/10 text-teal-500', 
-        isToggle: true 
+        ),
+        color: 'bg-teal-500/10 text-teal-500',
+        isToggle: true
       },
     ]
   },
@@ -139,7 +141,7 @@ export default function BusinessSettings() {
           resize_photo_max_size_mb: 2.5
         }
       });
-      
+
       if (response && response.success === false) {
         toast.error(response.message || 'Failed to update settings');
         setIsResizeEnabled(!checked);
@@ -588,7 +590,7 @@ export default function BusinessSettings() {
                         onClick={() => setShowAddFeaturesModal(true)}
                         className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white text-sm font-medium hover:shadow-lg hover:shadow-orange-500/25 transition-all"
                       >
-                        Upgrade Plan
+                        Add More Features
                       </button>
                     </div>
 
@@ -671,20 +673,21 @@ export default function BusinessSettings() {
         open={showAddFeaturesModal}
         onOpenChange={setShowAddFeaturesModal}
         plan={apiPlan as any}
+        isActivePlan={isPlanActive}
       />
 
       {/* Active Plan Details Modal */}
       {showPlanDetailsModal && apiPlan && isPlanActive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowPlanDetailsModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 overflow-hidden animate-in fade-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="relative px-6 py-6 bg-gradient-to-br from-[#121212] to-[#242424] text-white">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-[hsl(var(--fab-amber))]/10 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4 pointer-events-none" />
               <div className="relative z-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
-                      <Sparkles className="w-5 h-5 text-purple-400" />
+                    <div className="w-10 h-10 rounded-xl bg-[hsl(var(--fab-amber))]/20 flex items-center justify-center border border-[hsl(var(--fab-amber))]/30">
+                      <Sparkles className="w-5 h-5 text-[hsl(var(--fab-amber))]" />
                     </div>
                     <div>
                       <p className="text-white/60 text-xs font-medium uppercase tracking-widest">Active Plan</p>
@@ -708,61 +711,82 @@ export default function BusinessSettings() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
               {/* Plan Limits */}
               <div>
                 <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Plan Limits</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Photos</p>
-                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_photos ? (apiPlan as any).max_photos.toLocaleString('en-IN') : 'N/A'}</p>
+                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
+                      <span>{(apiPlan as any).max_photos === 0 ? 'Unlimited' : (apiPlan as any).max_photos ? (apiPlan as any).max_photos.toLocaleString('en-IN') : 'N/A'}</span>
+                      {(() => {
+                        // Using '2000' as fallback since backend is returning null right now
+                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Photos')?.value;
+                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
+                      })()}
+                    </p>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Videos</p>
-                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_videos || 'N/A'}</p>
+                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
+                      <span>{(apiPlan as any).max_videos === 0 ? 'Unlimited' : (apiPlan as any).max_videos ? (apiPlan as any).max_videos.toLocaleString('en-IN') : 'N/A'}</span>
+                      {(() => {
+                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Videos')?.value;
+                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
+                      })()}
+                    </p>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
-                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_storage_bytes ? formatBytes((apiPlan as any).max_storage_bytes) : 'N/A'}</p>
+                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
+                      <span>{(apiPlan as any).max_storage_bytes === 0 ? 'Unlimited' : (apiPlan as any).max_storage_bytes ? formatBytes((apiPlan as any).max_storage_bytes) : 'N/A'}</span>
+                      {(() => {
+                        // Using '10' as fallback since backend is returning null right now
+                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Storage')?.value;
+                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')} GB</span> : null;
+                      })()}
+                    </p>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Events</p>
-                    <p className="text-lg font-black text-slate-800 mt-0.5">{(apiPlan as any).max_events || 'N/A'}</p>
+                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
+                      <span>{(apiPlan as any).max_events === 0 ? 'Unlimited' : (apiPlan as any).max_events ? (apiPlan as any).max_events.toLocaleString('en-IN') : 'N/A'}</span>
+                      {(() => {
+                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Events')?.value;
+                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Features Enabled */}
+              {/* Features Overview */}
               <div>
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Features Included</h4>
+                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Features Overview</h4>
                 <div className="flex flex-wrap gap-2">
-                  {(apiPlan as any).has_custom_watermark && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Custom Watermark</span>
-                  )}
-                  {(apiPlan as any).has_face_recognition && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Face Recognition</span>
-                  )}
-                  {(apiPlan as any).has_bulk_download && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Bulk Download</span>
-                  )}
-                  {(apiPlan as any).has_business_branding && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Business Branding</span>
-                  )}
-                  {(apiPlan as any).has_switch_downloads && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Switch Downloads</span>
-                  )}
-                  {(apiPlan as any).has_portfolio_website && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Portfolio Website</span>
-                  )}
-                  {(apiPlan as any).has_team_login && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Team Login</span>
-                  )}
-                  {(apiPlan as any).has_view_client_favorites && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Client Favorites</span>
-                  )}
-                  {(apiPlan as any).has_digital_album && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100"><CheckCircle2 className="w-3 h-3" /> Digital Flipbook</span>
-                  )}
+                  {[
+                    { key: 'has_custom_watermark', label: 'Custom Watermark' },
+                    { key: 'has_face_recognition', label: 'Face Recognition' },
+                    { key: 'has_bulk_download', label: 'Bulk Download' },
+                    { key: 'has_business_branding', label: 'Business Branding' },
+                    { key: 'has_switch_downloads', label: 'Switch Downloads' },
+                    { key: 'has_portfolio_website', label: 'Portfolio Website' },
+                    { key: 'has_team_login', label: 'Team Login' },
+                    { key: 'has_view_client_favorites', label: 'Client Favorites' },
+                    { key: 'has_digital_album', label: 'Digital Flipbook' },
+                  ].map((feat) => {
+                    const isEnabled = !!(apiPlan as any)[feat.key];
+                    return isEnabled ? (
+                      <span key={feat.key} className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100">
+                        <CheckCircle2 className="w-3 h-3 text-purple-600" /> {feat.label}
+                      </span>
+                    ) : (
+                      <span key={feat.key} className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-50 text-slate-400 border border-slate-100 line-through decoration-slate-300">
+                        <XCircle className="w-3 h-3 text-slate-300" /> {feat.label}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -779,7 +803,7 @@ export default function BusinessSettings() {
                 onClick={() => { setShowPlanDetailsModal(false); setShowAddFeaturesModal(true); }}
                 className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white text-sm font-bold hover:shadow-lg hover:shadow-orange-500/25 transition-all"
               >
-                Upgrade Plan
+                Add More Features
               </button>
             </div>
           </div>

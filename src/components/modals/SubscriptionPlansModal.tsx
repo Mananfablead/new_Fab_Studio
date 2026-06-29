@@ -288,127 +288,127 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
                     className="w-full relative px-2 sm:px-6"
                   >
                     <CarouselContent className="-ml-4 sm:-ml-6 py-4">
-                    {visiblePlans.map((plan, idx) => {
-                      const isActive = isPlanPurchased && String(plan.id) === String(purchasedPlanId ?? activePlan?.id);
-                      const isSelecting = String(selectingPlanId) === String(plan.id);
-                      const icon = plan.icon || ICON_MAP[idx] || 'sparkles';
-                      const gradient = plan.color || GRADIENT_MAP[idx] || 'from-blue-500 to-cyan-500';
-                      const period = plan.period || plan.billing_cycle || 'month';
-                      const capabilities = buildCapabilities(plan);
+                      {visiblePlans.map((plan, idx) => {
+                        const isActive = isPlanPurchased && String(plan.id) === String(purchasedPlanId ?? activePlan?.id);
+                        const isSelecting = String(selectingPlanId) === String(plan.id);
+                        const icon = plan.icon || ICON_MAP[idx] || 'sparkles';
+                        const gradient = plan.color || GRADIENT_MAP[idx] || 'from-blue-500 to-cyan-500';
+                        const period = plan.period || plan.billing_cycle || 'month';
+                        const capabilities = buildCapabilities(plan);
 
-                      return (
-                        <CarouselItem key={plan.id} className="pl-4 sm:pl-6 basis-full md:basis-1/2 lg:basis-1/3 flex">
-                        <div
-                          className={`relative rounded-xl border-2 transition-all duration-300 overflow-hidden flex flex-col w-full bg-white ${isActive
-                              ? 'border-[hsl(var(--fab-amber))] shadow-xl shadow-[hsl(var(--fab-amber))]/10'
-                              : 'border-border hover:border-[hsl(var(--fab-amber))]/50 hover:shadow-lg'
-                            }`}
-                        >
-                          {/* Active badge */}
-                          {isActive && (
-                            <div className="bg-[hsl(var(--fab-amber))] text-[hsl(var(--fab-navy))] text-center py-1.5 text-xs font-bold uppercase tracking-wider">
-                              Current Plan
-                            </div>
-                          )}
-
-                          <div className="p-6 flex flex-col flex-1">
-                            {/* Icon & Name */}
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg shrink-0`}>
-                                <IconComponent icon={icon} className="w-6 h-6 text-white" />
-                              </div>
-                              <div>
-                                <h4 className="font-heading font-bold text-lg leading-tight">{plan.name}</h4>
-                                <p className="text-xs text-muted-foreground">{period}ly billing</p>
-                              </div>
-                            </div>
-
-                            {/* Description */}
-                            {plan.description && (
-                              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                {plan.description}
-                              </p>
-                            )}
-
-                            {/* Price */}
-                            <div className="mb-5">
-                              <span className="text-4xl font-bold">
-                                {formatPrice(plan.price, plan.currency)}
-                              </span>
-                              {plan.price !== 0 && plan.price !== '0' && (
-                                <span className="text-muted-foreground text-sm">/{period}</span>
-                              )}
-                            </div>
-
-                            {/* Capabilities */}
-                            <ul className="space-y-2.5 mb-6 flex-1">
-                              {capabilities
-                                .filter(cap => {
-                                  const isBool = typeof cap.value === 'boolean';
-                                  return !isBool || cap.value === true;
-                                })
-                                .map((cap, i) => {
-                                const isBool = typeof cap.value === 'boolean';
-                                const isProvided = isBool ? cap.value : true;
-
-                                return (
-                                  <li key={i} className="flex items-center gap-2.5 text-sm">
-                                    {/* tick / cross */}
-                                    <div
-                                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isProvided ? 'bg-green-100' : 'bg-red-100'
-                                        }`}
-                                    >
-                                      {isProvided ? (
-                                        <Check className="w-3 h-3 text-green-600" />
-                                      ) : (
-                                        <X className="w-3 h-3 text-red-400" />
-                                      )}
-                                    </div>
-
-                                    {/* icon */}
-                                    {cap.icon && (
-                                      <span className="text-muted-foreground">{cap.icon}</span>
-                                    )}
-
-                                    {/* label + value */}
-                                    <span className={`${isProvided ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
-                                      {cap.label}
-                                      {!isBool && (
-                                        <span className="ml-1 font-semibold text-foreground no-underline" style={{ textDecoration: 'none' }}>
-                                          — {cap.value as string}
-                                        </span>
-                                      )}
-                                    </span>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-
-                            {/* CTA */}
-                            <Button
-                              className={`w-full py-5 rounded-xl font-semibold transition-all ${isActive
-                                  ? 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
-                                  : 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
+                        return (
+                          <CarouselItem key={plan.id} className="pl-4 sm:pl-6 basis-full md:basis-1/2 lg:basis-1/3 flex">
+                            <div
+                              className={`relative rounded-xl border-2 transition-all duration-300 overflow-hidden flex flex-col w-full bg-white ${isActive
+                                ? 'border-[hsl(var(--fab-amber))] shadow-xl shadow-[hsl(var(--fab-amber))]/10'
+                                : 'border-border hover:border-[hsl(var(--fab-amber))]/50 hover:shadow-lg'
                                 }`}
-                              disabled={!!selectingPlanId}
-                              onClick={() => handleSelectPlan(plan, isActive)}
                             >
-                              {isSelecting ? (
-                                <span className="flex items-center gap-2">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Processing…
-                                </span>
-                              ) : isActive ? (
-                                'Add More Features'
-                              ) : (
-                                'Choose Plan'
+                              {/* Active badge */}
+                              {isActive && (
+                                <div className="bg-[hsl(var(--fab-amber))] text-[hsl(var(--fab-navy))] text-center py-1.5 text-xs font-bold uppercase tracking-wider">
+                                  Current Plan
+                                </div>
                               )}
-                            </Button>
-                          </div>
-                        </div>
-                        </CarouselItem>
-                      );
-                    })}
+
+                              <div className="p-6 flex flex-col flex-1">
+                                {/* Icon & Name */}
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg shrink-0`}>
+                                    <IconComponent icon={icon} className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-heading font-bold text-lg leading-tight">{plan.name}</h4>
+                                    <p className="text-xs text-muted-foreground">{period}ly billing</p>
+                                  </div>
+                                </div>
+
+                                {/* Description */}
+                                {plan.description && (
+                                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                    {plan.description}
+                                  </p>
+                                )}
+
+                                {/* Price */}
+                                <div className="mb-5">
+                                  <span className="text-4xl font-bold">
+                                    {formatPrice(plan.price, plan.currency)}
+                                  </span>
+                                  {plan.price !== 0 && plan.price !== '0' && (
+                                    <span className="text-muted-foreground text-sm">/{period}</span>
+                                  )}
+                                </div>
+
+                                {/* Capabilities */}
+                                <ul className="space-y-2.5 mb-6 flex-1">
+                                  {capabilities
+                                    .filter(cap => {
+                                      const isBool = typeof cap.value === 'boolean';
+                                      return !isBool || cap.value === true;
+                                    })
+                                    .map((cap, i) => {
+                                      const isBool = typeof cap.value === 'boolean';
+                                      const isProvided = isBool ? cap.value : true;
+
+                                      return (
+                                        <li key={i} className="flex items-center gap-2.5 text-sm">
+                                          {/* tick / cross */}
+                                          <div
+                                            className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isProvided ? 'bg-green-100' : 'bg-red-100'
+                                              }`}
+                                          >
+                                            {isProvided ? (
+                                              <Check className="w-3 h-3 text-green-600" />
+                                            ) : (
+                                              <X className="w-3 h-3 text-red-400" />
+                                            )}
+                                          </div>
+
+                                          {/* icon */}
+                                          {cap.icon && (
+                                            <span className="text-muted-foreground">{cap.icon}</span>
+                                          )}
+
+                                          {/* label + value */}
+                                          <span className={`${isProvided ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+                                            {cap.label}
+                                            {!isBool && (
+                                              <span className="ml-1 font-semibold text-foreground no-underline" style={{ textDecoration: 'none' }}>
+                                                — {cap.value as string}
+                                              </span>
+                                            )}
+                                          </span>
+                                        </li>
+                                      );
+                                    })}
+                                </ul>
+
+                                {/* CTA */}
+                                <Button
+                                  className={`w-full py-5 rounded-xl font-semibold transition-all ${isActive
+                                    ? 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
+                                    : 'bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 hover:-translate-y-0.5'
+                                    }`}
+                                  disabled={!!selectingPlanId}
+                                  onClick={() => handleSelectPlan(plan, isActive)}
+                                >
+                                  {isSelecting ? (
+                                    <span className="flex items-center gap-2">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      Processing…
+                                    </span>
+                                  ) : isActive ? (
+                                    'Add More Features'
+                                  ) : (
+                                    'Choose Plan'
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </CarouselItem>
+                        );
+                      })}
                     </CarouselContent>
                     <CarouselPrevious className="hidden sm:flex -left-4 bg-white/80 backdrop-blur-sm shadow-md border-slate-200 text-slate-700 hover:bg-white hover:text-[hsl(var(--fab-amber))]" />
                     <CarouselNext className="hidden sm:flex -right-4 bg-white/80 backdrop-blur-sm shadow-md border-slate-200 text-slate-700 hover:bg-white hover:text-[hsl(var(--fab-amber))]" />
@@ -444,6 +444,7 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
         onOpenChange={handleAddFeaturesOpenChange}
         plan={selectedPlan}
         isActivePlan={selectedPlanIsActive}
+        onPaymentSuccess={() => onOpenChange(false)}
       />
     </>
   );

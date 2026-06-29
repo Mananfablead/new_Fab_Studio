@@ -139,7 +139,8 @@ export default function InvoiceDetailsPage() {
       `}</style>
 
       {/* Page Header (No Print) */}
-      <div className="flex items-center gap-4 no-print">
+      <div className="flex items-center justify-between gap-4 bg-white rounded-2xl border border-slate-150 p-4 sm:px-6 sm:py-5 shadow-sm no-print">
+        <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/settings/transactions')}
           className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm shrink-0"
@@ -151,6 +152,7 @@ export default function InvoiceDetailsPage() {
           <p className="text-xs text-slate-400 font-medium">
             Ref: {transaction.razorpay_payment_id || transaction.razorpay_order_id || `TRX-${transaction.id}`}
           </p>
+        </div>
         </div>
       </div>
 
@@ -167,7 +169,7 @@ export default function InvoiceDetailsPage() {
             <div className="text-right">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Total Paid</span>
               <span className="text-3xl font-black text-slate-800 tracking-tight">
-                {formatAmount(transaction.amount)}
+                {formatAmount(transaction.total_amount || transaction.amount)}
               </span>
             </div>
           </div>
@@ -213,7 +215,6 @@ export default function InvoiceDetailsPage() {
                 <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-3">Item Description</th>
-                    <th className="px-5 py-3 text-right w-[100px]">Qty</th>
                     <th className="px-5 py-3 text-right w-[120px]">Total</th>
                   </tr>
                 </thead>
@@ -221,11 +222,10 @@ export default function InvoiceDetailsPage() {
                   {/* Plan Line Item */}
                   {decodedDetails.plan && (
                     <tr className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-4 font-semibold text-slate-800">
+                      <td className="px-5 py-3 font-semibold text-slate-800">
                         {decodedDetails.plan.name} Plan Upgrade
                       </td>
-                      <td className="px-5 py-4 text-right">1</td>
-                      <td className="px-5 py-4 text-right font-bold text-slate-800">
+                      <td className="px-5 py-3 text-right font-bold text-slate-800">
                         ₹{Number(decodedDetails.plan.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -233,11 +233,10 @@ export default function InvoiceDetailsPage() {
                   {/* Addons Line Items */}
                   {decodedDetails.addons.map((addon, index) => (
                     <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-4 font-medium text-slate-600">
+                      <td className="px-5 py-3 font-medium text-slate-600">
                         {addon.name}
                       </td>
-                      <td className="px-5 py-4 text-right">1</td>
-                      <td className="px-5 py-4 text-right font-bold text-slate-800">
+                      <td className="px-5 py-3 text-right font-bold text-slate-800">
                         ₹{Number(addon.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -245,12 +244,11 @@ export default function InvoiceDetailsPage() {
                   {/* Fallback if nothing matched */}
                   {!decodedDetails.plan && decodedDetails.addons.length === 0 && (
                     <tr className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-4 font-medium">
+                      <td className="px-5 py-3 font-medium">
                         {transaction.description || 'Plan / Add-on Payment'}
                       </td>
-                      <td className="px-5 py-4 text-right">1</td>
-                      <td className="px-5 py-4 text-right font-semibold">
-                        {formatAmount(transaction.amount)}
+                      <td className="px-5 py-3 text-right font-semibold">
+                        {formatAmount(transaction.total_amount || transaction.amount)}
                       </td>
                     </tr>
                   )}
@@ -354,35 +352,13 @@ export default function InvoiceDetailsPage() {
             </div>
           )}
 
-          {/* Tax & Grand Total breakdown */}
-          {(() => {
-            const amt = transaction.amount > 1000 ? transaction.amount / 100 : transaction.amount;
-            const subtotal = amt / 1.18;
-            const gst = amt - subtotal;
-            const cgst = gst / 2;
-            const sgst = gst / 2;
-
-            return (
-              <div className="space-y-2.5 border-t-2 border-dashed border-slate-200 pt-6 text-sm">
-                <div className="flex justify-between text-slate-500 font-semibold">
-                  <span>Subtotal (Exclusive of Taxes)</span>
-                  <span>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-slate-500 font-semibold">
-                  <span>CGST (9%)</span>
-                  <span>₹{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-slate-500 font-semibold">
-                  <span>SGST (9%)</span>
-                  <span>₹{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-slate-900 font-black text-xl border-t-2 border-slate-200 pt-4 mt-4">
-                  <span>Grand Total (Inclusive of Taxes)</span>
-                  <span className="text-orange-600">{formatAmount(transaction.amount)}</span>
-                </div>
-              </div>
-            );
-          })()}
+          {/* Grand Total */}
+          <div className="space-y-2.5 border-t-2 border-dashed border-slate-200 pt-6 text-sm">
+            <div className="flex justify-between text-slate-900 font-black text-xl">
+              <span>Grand Total</span>
+              <span className="text-orange-600">{formatAmount(transaction.total_amount || transaction.amount)}</span>
+            </div>
+          </div>
 
           {/* Security Badge */}
           <div className="flex items-center justify-center gap-2.5 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 text-xs font-bold mt-8 shadow-sm">

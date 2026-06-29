@@ -7,6 +7,7 @@ export interface CreateOrderPayload {
   plan_id?: string | number;
   feature_id?: number[];
   addons_id?: number[];
+  is_upgrade?: boolean;
 }
 
 export interface CreateOrderResponse {
@@ -32,6 +33,7 @@ export interface VerifySignatureResponse {
 export interface Transaction {
   id: string | number;
   amount: number;
+  total_amount?: string | number;
   currency: string;
   status: string;
   created_at: string;

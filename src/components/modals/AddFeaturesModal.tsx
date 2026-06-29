@@ -13,6 +13,7 @@ import { selectUser } from '@/store/selectors';
 import { createOrder, verifySignature, openRazorpayCheckout } from '@/services/paymentService';
 import api from '@/services/api';
 import type { Plan } from '@/store/slices/plansSlice';
+import PaymentSuccessModal from './PaymentSuccessModal';
 
 // ─── API types ────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ interface AddFeaturesModalProps {
   onOpenChange: (open: boolean) => void;
   plan?: Plan | null;
   isActivePlan?: boolean; // true = user already owns this plan, charge addons only
+  onPaymentSuccess?: () => void;
 }
 
 // ─── Helpers & Resolvers ──────────────────────────────────────────────────────
@@ -108,7 +110,7 @@ const initDropdowns = () => ({ photos: 'none', videos: 'none', storage: 'none', 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePlan = false }: AddFeaturesModalProps) {
+export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePlan = false, onPaymentSuccess }: AddFeaturesModalProps) {
   const user = useAppSelector(selectUser);
 
   const [dropdowns, setDropdowns] = useState(initDropdowns());
@@ -116,6 +118,7 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
   const [isProcessing, setIsProcessing] = useState(false);
   const [features, setFeatures] = useState<UncheckedFeature[]>([]);
   const [featuresLoading, setFeaturesLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Synchronous guard against double-click race condition
   const processingRef = useRef(false);
@@ -191,7 +194,7 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
   const handleProceedToCheckout = useCallback(async () => {
     if (processingRef.current) return;
 
-    if (grandTotal <= 0) {
+    if (isActivePlan && grandTotal <= 0) {
       toast.info('Please select at least one add-on to proceed.');
       return;
     }
@@ -222,7 +225,7 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
         }
       });
 
-      // Create order — backend handles price calculation from plan_id + addons_id
+      // Create order
       const order = await createOrder({
         amount: grandTotal,
         ...(plan?.id && { plan_id: plan.id }),
@@ -230,10 +233,10 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
         ...(addons_id.length > 0 && { addons_id }),
       });
 
-      // Open Razorpay modal — use order.amount from backend (already in paise)
+      // Open Razorpay modal
       openRazorpayCheckout({
         orderId: order.id,
-        amount: order.amount, // paise — from backend order, reflects true total
+        amount: isActivePlan ? grandTotal * 100 : order.amount, // Override backend amount for upgrades
         currency: order.currency ?? 'INR',
         name: 'Fablead Studio',
         description: plan ? `${plan.name} Plan + Add-ons` : 'Add-ons',
@@ -247,9 +250,10 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
         onSuccess: async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
           try {
             await verifySignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature });
-            toast.success('Payment successful! Your plan has been updated.');
             processingRef.current = false;
-            handleClose();
+            onOpenChange(false); // Close the checkout modal
+            setShowSuccessModal(true); // Open the success modal
+            if (onPaymentSuccess) onPaymentSuccess();
           } catch (err) {
             console.error('Signature verification failed:', err);
             toast.error('Payment received but verification failed. Please contact support.');
@@ -276,6 +280,7 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:text-white [&>button]:hover:text-[hsl(var(--fab-amber))] [&>button]:bg-white/10 [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-2 [&>button]:transition-colors [&>button]:z-50 [&>button]:right-4 [&>button]:top-4 sm:[&>button]:right-4 sm:[&>button]:top-4">
         <div className="bg-white rounded-2xl shadow-2xl m-4 sm:m-0 flex flex-col overflow-hidden max-h-[95dvh] sm:max-h-[90vh]">
@@ -440,12 +445,26 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
               variant="outline"
               disabled={isProcessing}
               className="flex-1 py-6 rounded-xl font-semibold text-slate-500 border-slate-200 bg-white hover:bg-slate-50 hover:text-slate-700 transition-all text-[15px]"
-              onClick={handleClose}
+              onClick={() => {
+                if (!isActivePlan && plan) {
+                  // User wants to buy the base plan but skip addons
+                  // Clear addons selection and proceed to checkout
+                  setDropdowns(initDropdowns());
+                  setToggles({});
+                  
+                  // Wrap in a setTimeout to ensure state updates before proceeding
+                  setTimeout(() => {
+                    handleProceedToCheckout();
+                  }, 0);
+                } else {
+                  handleClose();
+                }
+              }}
             >
               Skip
             </Button>
             <Button
-              disabled={isProcessing || featuresLoading || grandTotal <= 0}
+              disabled={isProcessing || featuresLoading || (isActivePlan && grandTotal <= 0)}
               className="flex-[2] py-6 rounded-xl font-semibold text-[15px] bg-gradient-to-r from-[hsl(var(--fab-amber))] to-orange-500 text-white hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-70"
               onClick={handleProceedToCheckout}
             >
@@ -463,5 +482,18 @@ export default function AddFeaturesModal({ open, onOpenChange, plan, isActivePla
         </div>
       </DialogContent>
     </Dialog>
+
+    <PaymentSuccessModal
+      open={showSuccessModal}
+      onOpenChange={(val) => {
+        setShowSuccessModal(val);
+        if (!val) {
+          setDropdowns(initDropdowns());
+          setToggles({});
+          setFeatures([]);
+        }
+      }}
+    />
+    </>
   );
 }

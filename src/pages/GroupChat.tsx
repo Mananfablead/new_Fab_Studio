@@ -62,6 +62,8 @@ export default function GroupChat() {
         id: Date.now(), 
         text: messageInput.trim() || undefined, 
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender_id: Number(currentUser?.id),
+        receiver_id: selectedParticipant?.id || selectedParticipant?.user_id,
         file: selectedFile || undefined
       }
     ]);

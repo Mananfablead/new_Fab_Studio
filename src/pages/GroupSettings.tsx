@@ -140,11 +140,11 @@ export default function GroupSettings() {
 
   // Fetch full profile with business info
   useUserFullProfile();
-  
+
   // Fetch plan capability controls
   const { userPlansData } = useUserPlans();
   const [showPlansModal, setShowPlansModal] = useState(false);
-  
+
   const activePlan = useAppSelector(selectActivePlan);
   const userPlan = userPlansData?.data?.plans?.[0];
   const isPlanActive = !!(
@@ -162,17 +162,17 @@ export default function GroupSettings() {
 
   const isBlockedTab = (tabKey: TabType): boolean => {
     if (user?.role !== 'photographer') return false;
-    
+
     // If they have no active plan at all, all premium settings are locked
     if (!isPlanActive) {
       return ['flipbook', 'branding', 'favorites'].includes(tabKey);
     }
-    
+
     // Otherwise, check individual capability flags from backend
     if (tabKey === 'flipbook') return !hasDigitalAlbum;
     if (tabKey === 'branding') return !hasBusinessBranding;
     if (tabKey === 'favorites') return !hasViewClientFavorites;
-    
+
     return false;
   };
 
@@ -240,7 +240,7 @@ export default function GroupSettings() {
 
     try {
       await dispatch(leaveGroup(groupId)).unwrap();
-    
+
       setShowLeaveDialog(false);
       toast({
         title: 'Left Group',
@@ -376,13 +376,12 @@ export default function GroupSettings() {
                         <span className={activeTab === tab.key ? 'text-primary-foreground/90' : 'text-muted-foreground'}>{tab.icon}</span>
                         <span>{tab.label}</span>
                         {isBlocked && (
-                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                            activeTab === tab.key 
-                              ? 'bg-white/20 text-white' 
-                              : isPlanActive 
-                                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
+                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${activeTab === tab.key
+                              ? 'bg-white/20 text-white'
+                              : isPlanActive
+                                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
                                 : 'bg-primary/10 text-primary border border-primary/20'
-                          }`}>
+                            }`}>
                             {isPlanActive ? 'Upgrade' : 'Locked'}
                           </span>
                         )}
@@ -419,13 +418,12 @@ export default function GroupSettings() {
                         <span>{tab.label}</span>
                       </div>
                       {isBlocked && (
-                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                          activeTab === tab.key 
+                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${activeTab === tab.key
                             ? 'bg-primary/20 text-primary-foreground'
-                            : isPlanActive 
-                              ? 'bg-amber-500/10 text-amber-600 border border-amber-500/10' 
+                            : isPlanActive
+                              ? 'bg-amber-500/10 text-amber-600 border border-amber-500/10'
                               : 'bg-primary/10 text-primary border border-primary/10'
-                        }`}>
+                          }`}>
                           {isPlanActive ? 'Upgrade' : 'Locked'}
                         </span>
                       )}
@@ -482,8 +480,8 @@ export default function GroupSettings() {
                         {isPlanActive ? 'Upgrade Your Plan' : 'Plan Required'}
                       </h2>
                       <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed mb-8">
-                        {isPlanActive 
-                          ? 'Upgrade your plan. Current plan does not support this feature.' 
+                        {isPlanActive
+                          ? 'Upgrade your plan. Current plan does not support this feature.'
                           : 'This premium feature is not included in your current subscription. Upgrade to unlock this and other professional-grade photography tools.'}
                       </p>
 
@@ -492,7 +490,7 @@ export default function GroupSettings() {
                           onClick={() => setShowPlansModal(true)}
                           className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-900 text-white font-extrabold text-sm hover:bg-slate-800 transition-all shadow-lg hover:shadow-slate-900/10 active:scale-95"
                         >
-                          Explore Premium Plans
+                          Upgrade Plans
                         </button>
                         <button
                           onClick={() => setActiveTab('general')}

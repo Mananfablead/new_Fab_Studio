@@ -719,9 +719,10 @@ export default function LoginPage() {
               {/* Back to Website Button */}
               <button
                 onClick={() => navigate("/home")}
-                className="absolute top-5 left-6 z-20 text-xs font-medium text-gray-400 hover:text-[hsl(var(--fab-amber))] hover:underline transition-colors p-2 -ml-2 -mt-2"
+                className="absolute top-5 left-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50/80 backdrop-blur-sm text-[11px] font-bold text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all border border-gray-200 shadow-sm group"
               >
-                Back to website
+                <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Back</span>
               </button>
               {/* Glow Effect */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-400/25 rounded-full blur-3xl" />

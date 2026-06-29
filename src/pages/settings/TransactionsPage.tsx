@@ -95,7 +95,7 @@ export default function TransactionsPage() {
 
     const headers = ['Transaction ID', 'Description', 'Status', 'Amount', 'Date'];
     const rows = filteredTransactions.map(t => {
-      const amt = Number(t.amount);
+      const amt = Number(t.total_amount || t.amount);
       return [
         t.razorpay_payment_id || t.razorpay_order_id || t.id,
         getTransactionSummary(t, plans),
@@ -264,7 +264,7 @@ export default function TransactionsPage() {
 
                     {/* Amount */}
                     <div className="text-sm font-black text-slate-800 sm:text-right">
-                      {formatAmount(t.amount)}
+                      {formatAmount(t.total_amount || t.amount)}
                     </div>
 
                     {/* Date */}

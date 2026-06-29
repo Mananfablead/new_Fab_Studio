@@ -178,9 +178,13 @@ export default function AnalyticsPage() {
       },
       groupStats: groups.map((g) => ({
         name: g.name,
+        eventType: g.eventType || "N/A",
+        status: g.status || "N/A",
         photos: g.photoCount || 0,
         participants: g.memberCount || g.participantCount || 0,
         views: (g as any).viewCount || 0,
+        monetization: g.monetization?.enabled ? "Yes" : "No",
+        flipbook: (g as any).flipbook?.enabled ? "Yes" : "No",
       })),
       uploadDistribution: groups.map((g) => ({
         groupName: g.name,
@@ -366,14 +370,14 @@ export default function AnalyticsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left px-4 py-3 font-medium">
-                      Group Name
-                    </th>
+                    <th className="text-left px-4 py-3 font-medium">Group Name</th>
+                    <th className="text-left px-4 py-3 font-medium">Type</th>
+                    <th className="text-left px-4 py-3 font-medium">Status</th>
                     <th className="text-right px-4 py-3 font-medium">Photos</th>
-                    <th className="text-right px-4 py-3 font-medium">
-                      Participants
-                    </th>
+                    <th className="text-right px-4 py-3 font-medium">Participants</th>
                     <th className="text-right px-4 py-3 font-medium">Views</th>
+                    <th className="text-center px-4 py-3 font-medium">Monetization</th>
+                    <th className="text-center px-4 py-3 font-medium">Flipbook</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -384,6 +388,12 @@ export default function AnalyticsPage() {
                         className="border-b border-border last:border-0 hover:bg-muted/30"
                       >
                         <td className="px-4 py-3 font-medium">{g.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground capitalize">{g.eventType || "N/A"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${g.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {g.status || "N/A"}
+                          </span>
+                        </td>
                         <td className="text-right px-4 py-3 text-muted-foreground">
                           {g.photoCount}
                         </td>
@@ -393,12 +403,26 @@ export default function AnalyticsPage() {
                         <td className="text-right px-4 py-3 text-muted-foreground">
                           {formatNumber((g as any).viewCount || 0)}
                         </td>
+                        <td className="text-center px-4 py-3">
+                          {g.monetization?.enabled ? (
+                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" title="Enabled"></span>
+                          ) : (
+                            <span className="inline-block w-2 h-2 rounded-full bg-slate-300" title="Disabled"></span>
+                          )}
+                        </td>
+                        <td className="text-center px-4 py-3">
+                          {(g as any).flipbook?.enabled ? (
+                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" title="Enabled"></span>
+                          ) : (
+                            <span className="inline-block w-2 h-2 rounded-full bg-slate-300" title="Disabled"></span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={8}
                         className="px-4 py-8 text-center text-muted-foreground"
                       >
                         {loading

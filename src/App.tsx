@@ -60,6 +60,9 @@ import ScrollToTop from "./components/ScrollToTop";
 import SEOHead from "./components/SEOHead";
 import SubscriptionPlansModal from "./components/modals/SubscriptionPlansModal";
 import { useUserPlans } from "@/hooks/useUserPlans";
+import { useMaintenance } from "@/hooks/useMaintenance";
+import MaintenancePage from "./pages/MaintenancePage";
+import { Loader2 } from "lucide-react";
 import {
   requestNotificationPermission,
   onMessageListener,
@@ -469,6 +472,25 @@ function AppRoutes() {
   );
 }
 
+function MaintenanceGate({ children }: { children: React.ReactNode }) {
+  const { isLive, message, loading, checkStatus } = useMaintenance();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-sm text-muted-foreground font-medium animate-pulse">Initializing Fablead Studio...</p>
+      </div>
+    );
+  }
+
+  if (!isLive) {
+    return <MaintenancePage message={message} onRetry={checkStatus} isRetrying={loading} />;
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
@@ -478,11 +500,13 @@ const App = () => (
         <AuthProvider>
           <WatermarkProvider>
             <BrowserRouter>
-              <ScrollToTop />
-              <SEOHead />
-              <GlobalAuthCheck />
-              <AppRoutes />
-              <ChatBotGate />
+              <MaintenanceGate>
+                <ScrollToTop />
+                <SEOHead />
+                <GlobalAuthCheck />
+                <AppRoutes />
+                <ChatBotGate />
+              </MaintenanceGate>
             </BrowserRouter>
           </WatermarkProvider>
         </AuthProvider>
