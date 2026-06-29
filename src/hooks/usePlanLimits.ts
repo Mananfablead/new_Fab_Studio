@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useUserPlans } from './useUserPlans';
 import { useAppSelector } from '@/store';
+import api from '@/services/api';
 
 export interface PlanLimits {
   maxEvents: number | null;
@@ -14,10 +16,46 @@ export interface LimitCheckResult {
   message: string;
 }
 
+let cachedStats: any = null;
+let statsFetchPromise: Promise<any> | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 export function usePlanLimits() {
   const { userPlansData } = useUserPlans();
   const groups = useAppSelector((state) => state.groups.groups);
   const user = useAppSelector((state) => state.auth.user);
+
+  const [stats, setStats] = useState<any>(cachedStats);
+
+  useEffect(() => {
+    if (user) {
+      if (cachedStats && Date.now() - lastFetchTime < CACHE_TTL) {
+        setStats(cachedStats);
+        return;
+      }
+      
+      if (!statsFetchPromise) {
+        statsFetchPromise = api.get('/dashboard/stats')
+          .then(res => {
+            const s = res.data?.data?.stats || res.data?.stats || res.data;
+            cachedStats = s;
+            lastFetchTime = Date.now();
+            statsFetchPromise = null;
+            return s;
+          })
+          .catch(err => {
+            console.error('usePlanLimits failed to fetch stats:', err);
+            statsFetchPromise = null;
+            throw err;
+          });
+      }
+      
+      statsFetchPromise.then(s => {
+        if (s) setStats(s);
+      }).catch(() => {});
+    }
+  }, [user]);
 
   const plan = userPlansData?.data?.plans?.[0];
   const isPlanActive = !!(
@@ -27,16 +65,20 @@ export function usePlanLimits() {
   );
 
   const limits: PlanLimits = {
-    maxEvents: plan?.max_events ?? null,
-    maxPhotos: plan?.max_photos ?? null,
-    maxVideos: plan?.max_videos ?? null,
-    maxStorageBytes: plan?.max_storage_bytes ?? null,
+    maxEvents: stats?.subscription?.eventUsage?.limit ?? plan?.max_events ?? null,
+    maxPhotos: stats?.subscription?.photoUsage?.limit ?? plan?.max_photos ?? null,
+    maxVideos: stats?.subscription?.videoUsage?.limit ?? plan?.max_videos ?? null,
+    maxStorageBytes: stats?.storage?.limitBytes ?? plan?.max_storage_bytes ?? null,
     isPlanActive,
   };
 
   // Current usage
-  const currentEventCount = groups?.length ?? 0;
-  const usedStorageBytes: number = (user as any)?.storage_used_bytes ?? 0;
+  const currentEventCount = stats?.subscription?.eventUsage?.used ?? groups?.length ?? 0;
+  const usedStorageBytes: number = stats?.storage?.usedBytes ?? (user as any)?.storage_used_bytes ?? 0;
+  
+  // Note: we can optionally expose total photos used if we want, but for now we keep the existing signatures
+  const totalPhotosUsed = stats?.subscription?.photoUsage?.used ?? 0;
+  const totalVideosUsed = stats?.subscription?.videoUsage?.used ?? 0;
 
   /**
    * Check if user can create a new group (event)
@@ -61,8 +103,12 @@ export function usePlanLimits() {
     if (!isPlanActive || limits.maxPhotos === null) {
       return { allowed: true, message: '' };
     }
-    if (currentGroupPhotoCount + newPhotoCount > limits.maxPhotos) {
-      const remaining = Math.max(0, limits.maxPhotos - currentGroupPhotoCount);
+    
+    // Fallback to currentGroupPhotoCount if stats aren't loaded yet
+    const used = totalPhotosUsed > 0 ? totalPhotosUsed : currentGroupPhotoCount;
+    
+    if (used + newPhotoCount > limits.maxPhotos) {
+      const remaining = Math.max(0, limits.maxPhotos - used);
       return {
         allowed: false,
         message: `You can only upload ${remaining} more photo${remaining === 1 ? '' : 's'}. Your plan allows a maximum of ${limits.maxPhotos} photos.`,
@@ -78,8 +124,12 @@ export function usePlanLimits() {
     if (!isPlanActive || limits.maxVideos === null) {
       return { allowed: true, message: '' };
     }
-    if (currentGroupVideoCount + newVideoCount > limits.maxVideos) {
-      const remaining = Math.max(0, limits.maxVideos - currentGroupVideoCount);
+    
+    // Fallback to currentGroupVideoCount if stats aren't loaded yet
+    const used = totalVideosUsed > 0 ? totalVideosUsed : currentGroupVideoCount;
+    
+    if (used + newVideoCount > limits.maxVideos) {
+      const remaining = Math.max(0, limits.maxVideos - used);
       return {
         allowed: false,
         message: `You can only upload ${remaining} more video${remaining === 1 ? '' : 's'}. Your plan allows a maximum of ${limits.maxVideos} videos.`,

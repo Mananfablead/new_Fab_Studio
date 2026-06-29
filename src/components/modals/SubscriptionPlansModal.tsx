@@ -233,7 +233,6 @@ export default function SubscriptionPlansModal({ open, onOpenChange, onInquiryCl
 
   const handleAddFeaturesOpenChange = (nextOpen: boolean) => {
     setAddFeaturesOpen(nextOpen);
-    if (!nextOpen) onInquiryClose?.();
   };
 
   return (

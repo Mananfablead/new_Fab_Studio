@@ -6,7 +6,7 @@ import api from '@/services/api';
 // Change this to `true` to force the Maintenance Page to show.
 // Change this to `false` to rely on the actual `/is-live` API.
 // -------------------------------------------------------------
-const FORCE_MAINTENANCE_MODE = false; 
+const FORCE_MAINTENANCE_MODE = false;
 const FORCE_MAINTENANCE_MESSAGE = "App is currently undergoing maintenance.";
 
 interface MaintenanceResponse {
@@ -25,7 +25,7 @@ export function useMaintenance() {
   const checkStatus = useCallback(async () => {
     setLoading(true);
     setError(false);
-    
+
     // Check manual override first
     if (FORCE_MAINTENANCE_MODE) {
       setTimeout(() => {
@@ -39,7 +39,7 @@ export function useMaintenance() {
     try {
       const response = await api.get<MaintenanceResponse>('/is-live');
       const data = response.data;
-      
+
       // If the API explicitly returns is_live: false, block the app
       if (data && typeof data.is_live === 'boolean' && data.is_live === false) {
         setIsLive(false);

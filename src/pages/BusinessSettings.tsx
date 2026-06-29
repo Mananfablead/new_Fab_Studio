@@ -5,7 +5,7 @@ import {
   ChevronRight, Sparkles, Shield, Bell, Palette, CreditCard, FolderOpen,
   ArrowLeft, Eye, Loader2, Crop, AlertTriangle, CheckCircle2,
   XCircle,
-  Copy
+  Copy, Image, Video, CalendarDays
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import AppHeader from '@/components/AppHeader';
@@ -182,6 +182,8 @@ export default function BusinessSettings() {
     }
   }, [dispatch, user?.role]);
 
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+
   // Fetch storage usage from dashboard stats API
   useEffect(() => {
     let cancelled = false;
@@ -212,6 +214,8 @@ export default function BusinessSettings() {
         };
 
         const storage = findStorageObject(body);
+        
+        setDashboardStats(body?.stats || body?.data?.stats || body);
 
         if (storage) {
           setStorageData({
@@ -350,7 +354,7 @@ export default function BusinessSettings() {
         {isRootSettings ? (
           <>
             {/* Quick Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 md:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4 mb-6 md:mb-8">
               {/* Storage Used */}
               <div
                 className={`bg-card rounded-xl border border-border fab-shadow p-4 flex items-center gap-4 ${user?.role === 'photographer' ? 'cursor-pointer hover:border-amber-400 hover:shadow-md transition-all' : ''
@@ -389,6 +393,123 @@ export default function BusinessSettings() {
                               storageData?.percentage ??
                               ((usedStorageBytes && maxStorageBytes) ? (usedStorageBytes / maxStorageBytes) * 100 : 0)
                             )}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Photos Used */}
+              <div
+                className={`bg-card rounded-xl border border-border fab-shadow p-4 flex items-center gap-4 ${user?.role === 'photographer' ? 'cursor-pointer hover:border-blue-400 hover:shadow-md transition-all' : ''
+                  }`}
+                onClick={() => {
+                  if (user?.role === 'photographer') {
+                    navigate('/analytics');
+                  }
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Image className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground font-medium">Photos Used</p>
+                  {storageLoading ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="text-xs text-muted-foreground">Calculating...</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold tracking-tight text-foreground">{dashboardStats?.subscription?.photoUsage?.used ?? 0}</span>
+                        <span className="text-sm text-muted-foreground font-normal">of {dashboardStats?.subscription?.photoUsage?.limit ?? ((apiPlan as any)?.max_photos || '∞')}</span>
+                      </div>
+                      <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
+                          style={{
+                            width: `${Math.min(100, dashboardStats?.subscription?.photoUsage?.percentage ?? 0)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Videos Used */}
+              <div
+                className={`bg-card rounded-xl border border-border fab-shadow p-4 flex items-center gap-4 ${user?.role === 'photographer' ? 'cursor-pointer hover:border-purple-400 hover:shadow-md transition-all' : ''
+                  }`}
+                onClick={() => {
+                  if (user?.role === 'photographer') {
+                    navigate('/analytics');
+                  }
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <Video className="w-6 h-6 text-purple-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground font-medium">Videos Used</p>
+                  {storageLoading ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="text-xs text-muted-foreground">Calculating...</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold tracking-tight text-foreground">{dashboardStats?.subscription?.videoUsage?.used ?? 0}</span>
+                        <span className="text-sm text-muted-foreground font-normal">of {dashboardStats?.subscription?.videoUsage?.limit ?? ((apiPlan as any)?.max_videos || '∞')}</span>
+                      </div>
+                      <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-500 rounded-full transition-all duration-1000 ease-out"
+                          style={{
+                            width: `${Math.min(100, dashboardStats?.subscription?.videoUsage?.percentage ?? 0)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Events Used */}
+              <div
+                className={`bg-card rounded-xl border border-border fab-shadow p-4 flex items-center gap-4 ${user?.role === 'photographer' ? 'cursor-pointer hover:border-emerald-400 hover:shadow-md transition-all' : ''
+                  }`}
+                onClick={() => {
+                  if (user?.role === 'photographer') {
+                    navigate('/analytics');
+                  }
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <CalendarDays className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground font-medium">Events Used</p>
+                  {storageLoading ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span className="text-xs text-muted-foreground">Calculating...</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold tracking-tight text-foreground">{dashboardStats?.subscription?.eventUsage?.used ?? 0}</span>
+                        <span className="text-sm text-muted-foreground font-normal">of {dashboardStats?.subscription?.eventUsage?.limit ?? ((apiPlan as any)?.max_events || '∞')}</span>
+                      </div>
+                      <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                          style={{
+                            width: `${Math.min(100, dashboardStats?.subscription?.eventUsage?.percentage ?? 0)}%`
                           }}
                         />
                       </div>
@@ -712,51 +833,109 @@ export default function BusinessSettings() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-              {/* Plan Limits */}
+              {/* Plan Limits & Usage */}
               <div>
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Plan Limits</h4>
+                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Plan Limits & Usage</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Photos */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Photos</p>
-                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
-                      <span>{(apiPlan as any).max_photos === 0 ? 'Unlimited' : (apiPlan as any).max_photos ? (apiPlan as any).max_photos.toLocaleString('en-IN') : 'N/A'}</span>
-                      {(() => {
-                        // Using '2000' as fallback since backend is returning null right now
-                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Photos')?.value;
-                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
-                      })()}
-                    </p>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Photos</p>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded uppercase">
+                          {dashboardStats?.subscription?.photoUsage?.used ?? 0} Used
+                        </span>
+                      </div>
+                      <p className="text-lg font-black text-slate-800 flex flex-wrap items-center gap-1">
+                        <span>{(apiPlan as any).max_photos === 0 ? 'Unlimited' : (apiPlan as any).max_photos ? (apiPlan as any).max_photos.toLocaleString('en-IN') : 'N/A'}</span>
+                        {(() => {
+                          const basePhotos = (apiPlan as any).max_photos || 0;
+                          const totalPhotos = dashboardStats?.subscription?.photoUsage?.limit ?? basePhotos;
+                          const addonPhotos = totalPhotos > basePhotos && basePhotos !== 0 ? totalPhotos - basePhotos : 0;
+                          return addonPhotos > 0 ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{addonPhotos.toLocaleString('en-IN')}</span> : null;
+                        })()}
+                      </p>
+                    </div>
+                    {((apiPlan as any).max_photos !== 0) && (
+                      <div className="mt-3 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${dashboardStats?.subscription?.photoUsage?.percentage ?? 0}%` }} />
+                      </div>
+                    )}
                   </div>
+                  {/* Videos */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Videos</p>
-                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
-                      <span>{(apiPlan as any).max_videos === 0 ? 'Unlimited' : (apiPlan as any).max_videos ? (apiPlan as any).max_videos.toLocaleString('en-IN') : 'N/A'}</span>
-                      {(() => {
-                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Videos')?.value;
-                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
-                      })()}
-                    </p>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Videos</p>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded uppercase">
+                          {dashboardStats?.subscription?.videoUsage?.used ?? 0} Used
+                        </span>
+                      </div>
+                      <p className="text-lg font-black text-slate-800 flex flex-wrap items-center gap-1">
+                        <span>{(apiPlan as any).max_videos === 0 ? 'Unlimited' : (apiPlan as any).max_videos ? (apiPlan as any).max_videos.toLocaleString('en-IN') : 'N/A'}</span>
+                        {(() => {
+                          const baseVideos = (apiPlan as any).max_videos || 0;
+                          const totalVideos = dashboardStats?.subscription?.videoUsage?.limit ?? baseVideos;
+                          const addonVideos = totalVideos > baseVideos && baseVideos !== 0 ? totalVideos - baseVideos : 0;
+                          return addonVideos > 0 ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{addonVideos.toLocaleString('en-IN')}</span> : null;
+                        })()}
+                      </p>
+                    </div>
+                    {((apiPlan as any).max_videos !== 0) && (
+                      <div className="mt-3 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${dashboardStats?.subscription?.videoUsage?.percentage ?? 0}%` }} />
+                      </div>
+                    )}
                   </div>
+                  {/* Storage */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
-                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
-                      <span>{(apiPlan as any).max_storage_bytes === 0 ? 'Unlimited' : (apiPlan as any).max_storage_bytes ? formatBytes((apiPlan as any).max_storage_bytes) : 'N/A'}</span>
-                      {(() => {
-                        // Using '10' as fallback since backend is returning null right now
-                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Storage')?.value;
-                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')} GB</span> : null;
-                      })()}
-                    </p>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Storage</p>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded uppercase">
+                          {dashboardStats?.storage?.usedFormatted ?? '0 B'}
+                        </span>
+                      </div>
+                      <p className="text-lg font-black text-slate-800 flex flex-wrap items-center gap-1">
+                        <span>{(apiPlan as any).max_storage_bytes === 0 ? 'Unlimited' : (apiPlan as any).max_storage_bytes ? formatBytes((apiPlan as any).max_storage_bytes) : 'N/A'}</span>
+                        {(() => {
+                          const baseStorage = (apiPlan as any).max_storage_bytes || 0;
+                          const totalStorage = dashboardStats?.storage?.limitBytes ?? baseStorage;
+                          const addonStorage = totalStorage > baseStorage && baseStorage !== 0 ? totalStorage - baseStorage : 0;
+                          return addonStorage > 0 ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{formatBytes(addonStorage).replace(' ', '')}</span> : null;
+                        })()}
+                      </p>
+                    </div>
+                    {((apiPlan as any).max_storage_bytes !== 0) && (
+                      <div className="mt-3 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${dashboardStats?.storage?.percentage ?? 0}%` }} />
+                      </div>
+                    )}
                   </div>
+                  {/* Events */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Events</p>
-                    <p className="text-lg font-black text-slate-800 mt-1 flex flex-wrap items-center gap-1">
-                      <span>{(apiPlan as any).max_events === 0 ? 'Unlimited' : (apiPlan as any).max_events ? (apiPlan as any).max_events.toLocaleString('en-IN') : 'N/A'}</span>
-                      {(() => {
-                        const addonValue = (apiPlan as any).features?.find((f: any) => f.feature_name === 'Events')?.value;
-                        return addonValue ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{Number(addonValue).toLocaleString('en-IN')}</span> : null;
-                      })()}
-                    </p>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Events</p>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded uppercase">
+                          {dashboardStats?.subscription?.eventUsage?.used ?? 0} Used
+                        </span>
+                      </div>
+                      <p className="text-lg font-black text-slate-800 flex flex-wrap items-center gap-1">
+                        <span>{(apiPlan as any).max_events === 0 ? 'Unlimited' : (apiPlan as any).max_events ? (apiPlan as any).max_events.toLocaleString('en-IN') : 'N/A'}</span>
+                        {(() => {
+                          const baseEvents = (apiPlan as any).max_events || 0;
+                          const totalEvents = dashboardStats?.subscription?.eventUsage?.limit ?? baseEvents;
+                          const addonEvents = totalEvents > baseEvents && baseEvents !== 0 ? totalEvents - baseEvents : 0;
+                          return addonEvents > 0 ? <span className="text-xs font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-md leading-none">+{addonEvents.toLocaleString('en-IN')}</span> : null;
+                        })()}
+                      </p>
+                    </div>
+                    {((apiPlan as any).max_events !== 0) && (
+                      <div className="mt-3 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${dashboardStats?.subscription?.eventUsage?.percentage ?? 0}%` }} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
