@@ -1,5 +1,5 @@
 import { getToken, onMessage } from "firebase/messaging";
-import { messaging } from "./firebase";
+import { messaging } from "./config/firebase";
 import { toast } from "sonner";
 
 export const requestNotificationPermission = async () => {
