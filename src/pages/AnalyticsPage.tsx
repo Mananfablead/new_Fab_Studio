@@ -109,23 +109,63 @@ export default function AnalyticsPage() {
     const total = data.reduce((a, b) => a + b, 0);
     const avg = data.length > 0 ? total / data.length : 0;
 
-    return { labels, data, total, avg };
+    let growthStr = "0%";
+    if (data.length > 0) {
+      const first = data[0];
+      const last = data[data.length - 1];
+      if (first === 0) {
+        growthStr = last > 0 ? "+100%" : "0%";
+      } else {
+        const diff = ((last - first) / first) * 100;
+        growthStr = `${diff >= 0 ? "+" : ""}${diff.toFixed(0)}%`;
+      }
+    }
+
+    return { labels, data, total, avg, growthStr };
   }, [groups, period]);
 
   const currentData = dynamicTrendData;
   const maxValue = Math.max(...currentData.data, 1);
 
-  const { totalPhotos, totalParticipants, totalViews } = useMemo(() => {
+  const { 
+    totalPhotos, 
+    totalParticipants, 
+    totalViews, 
+    photosChange, 
+    groupsChange, 
+    participantsChange, 
+    viewsChange 
+  } = useMemo(() => {
+    const now = new Date();
+    const thirtyDaysAgo = subDays(now, 30);
+    const sixtyDaysAgo = subDays(now, 60);
+
+    const currentPeriodGroups = groups.filter(g => g.createdAt && new Date(g.createdAt) >= thirtyDaysAgo);
+    const prevPeriodGroups = groups.filter(g => g.createdAt && new Date(g.createdAt) >= sixtyDaysAgo && new Date(g.createdAt) < thirtyDaysAgo);
+
+    const calcChange = (curr: number, prev: number) => {
+      if (prev === 0) return curr > 0 ? "+100%" : "0%";
+      const diff = ((curr - prev) / prev) * 100;
+      return `${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%`;
+    };
+
+    const currPhotos = currentPeriodGroups.reduce((acc, g) => acc + (g.photoCount || 0), 0);
+    const prevPhotos = prevPeriodGroups.reduce((acc, g) => acc + (g.photoCount || 0), 0);
+    const currGroups = currentPeriodGroups.length;
+    const prevGroups = prevPeriodGroups.length;
+    const currParts = currentPeriodGroups.reduce((acc, g) => acc + (g.memberCount || g.participantCount || 0), 0);
+    const prevParts = prevPeriodGroups.reduce((acc, g) => acc + (g.memberCount || g.participantCount || 0), 0);
+    const currViews = currentPeriodGroups.reduce((acc, g) => acc + ((g as any).viewCount || 0), 0);
+    const prevViews = prevPeriodGroups.reduce((acc, g) => acc + ((g as any).viewCount || 0), 0);
+
     return {
       totalPhotos: groups.reduce((acc, g) => acc + (g.photoCount || 0), 0),
-      totalParticipants: groups.reduce(
-        (acc, g) => acc + (g.memberCount || g.participantCount || 0),
-        0,
-      ),
-      totalViews: groups.reduce(
-        (acc, g) => acc + ((g as any).viewCount || 0),
-        0,
-      ),
+      totalParticipants: groups.reduce((acc, g) => acc + (g.memberCount || g.participantCount || 0), 0),
+      totalViews: groups.reduce((acc, g) => acc + ((g as any).viewCount || 0), 0),
+      photosChange: calcChange(currPhotos, prevPhotos),
+      groupsChange: calcChange(currGroups, prevGroups),
+      participantsChange: calcChange(currParts, prevParts),
+      viewsChange: calcChange(currViews, prevViews)
     };
   }, [groups]);
 
@@ -135,28 +175,28 @@ export default function AnalyticsPage() {
         label: "Total Photos",
         value: totalPhotos.toLocaleString(),
         icon: Camera,
-        change: "+12%",
+        change: photosChange,
       },
       {
         label: "Total Groups",
         value: groups.length.toString(),
         icon: BarChart3,
-        change: `+${groups.length}`,
+        change: groupsChange,
       },
       {
         label: "Participants",
         value: totalParticipants.toLocaleString(),
         icon: Users,
-        change: "+45",
+        change: participantsChange,
       },
       {
         label: "Total Views",
-        value: formatNumber(totalViews || 12400),
+        value: formatNumber(totalViews),
         icon: Eye,
-        change: "+18%",
+        change: viewsChange,
       },
     ];
-  }, [groups.length, totalPhotos, totalParticipants, totalViews]);
+  }, [groups.length, totalPhotos, totalParticipants, totalViews, photosChange, groupsChange, participantsChange, viewsChange]);
 
   const handleExport = () => {
     const totalPhotosAll = groups.reduce((a, g) => a + (g.photoCount || 0), 0);
@@ -166,7 +206,7 @@ export default function AnalyticsPage() {
         totalPhotos: totalPhotos,
         totalGroups: groups.length,
         totalParticipants: totalParticipants,
-        totalViews: totalViews || 12400,
+        totalViews: totalViews,
       },
       uploadTrend: {
         period: period,
@@ -174,12 +214,12 @@ export default function AnalyticsPage() {
         data: currentData.data,
         totalUploads: currentData.total,
         avgPerPeriod: currentData.avg,
-        growth: `+${(((currentData.data[currentData.data.length - 1] - currentData.data[0]) / (currentData.data[0] || 1)) * 100).toFixed(0)}%`,
+        growth: currentData.growthStr,
       },
       groupStats: groups.map((g) => ({
         name: g.name,
         eventType: g.eventType || "N/A",
-        status: g.status || "N/A",
+        status: (g as any).status || "N/A",
         photos: g.photoCount || 0,
         participants: g.memberCount || g.participantCount || 0,
         views: (g as any).viewCount || 0,
@@ -201,7 +241,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead pageKey="/analytics" />
+      <SEOHead />
       <AppHeader />
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -313,14 +353,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-fab-success">
-                +
-                {(
-                  ((currentData.data[currentData.data.length - 1] -
-                    currentData.data[0]) /
-                    (currentData.data[0] || 1)) *
-                  100
-                ).toFixed(0)}
-                %
+                {currentData.growthStr}
               </p>
               <p className="text-xs text-muted-foreground">Growth</p>
             </div>
@@ -390,8 +423,8 @@ export default function AnalyticsPage() {
                         <td className="px-4 py-3 font-medium">{g.name}</td>
                         <td className="px-4 py-3 text-muted-foreground capitalize">{g.eventType || "N/A"}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${g.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                            {g.status || "N/A"}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${(g as any).status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {(g as any).status || "N/A"}
                           </span>
                         </td>
                         <td className="text-right px-4 py-3 text-muted-foreground">

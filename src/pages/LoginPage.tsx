@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
+  AlertCircle,
 } from "lucide-react";
 import {
   requestNotificationPermission,
@@ -243,6 +244,74 @@ export default function LoginPage() {
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [lastOtpSentTo, setLastOtpSentTo] = useState("");
+
+  // Rate limiting state
+  const [lockoutTime, setLockoutTime] = useState<number | null>(null);
+  const [remainingTime, setRemainingTime] = useState<number>(0);
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+
+  const getIdentifier = () => inputMode === "email" ? value.toLowerCase().trim() : (countryDial + value).trim();
+
+  // Initialize rate limit state from localStorage
+  useEffect(() => {
+    const identifier = getIdentifier();
+    if (!identifier) {
+      setLockoutTime(null);
+      setFailedAttempts(0);
+      return;
+    }
+
+    const storedLockout = localStorage.getItem(`website_login_lockout_${identifier}`);
+    const storedAttempts = localStorage.getItem(`website_login_attempts_${identifier}`);
+    
+    setFailedAttempts(parseInt(storedAttempts || '0', 10));
+
+    if (storedLockout) {
+      const lockoutTimestamp = parseInt(storedLockout, 10);
+      if (Date.now() < lockoutTimestamp) {
+        setLockoutTime(lockoutTimestamp);
+      } else {
+        localStorage.removeItem(`website_login_lockout_${identifier}`);
+        localStorage.removeItem(`website_login_attempts_${identifier}`);
+        setLockoutTime(null);
+        setFailedAttempts(0);
+      }
+    } else {
+      setLockoutTime(null);
+    }
+  }, [value, inputMode, countryDial]);
+
+  // Update remaining time timer
+  useEffect(() => {
+    if (!lockoutTime) return;
+
+    const identifier = getIdentifier();
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now >= lockoutTime) {
+        setLockoutTime(null);
+        setRemainingTime(0);
+        if (identifier) {
+          localStorage.removeItem(`website_login_lockout_${identifier}`);
+          localStorage.removeItem(`website_login_attempts_${identifier}`);
+        }
+        clearInterval(interval);
+      } else {
+        setRemainingTime(Math.ceil((lockoutTime - now) / 1000));
+      }
+    }, 1000);
+
+    // Immediate first tick update
+    const initialRemaining = Math.ceil((lockoutTime - Date.now()) / 1000);
+    if (initialRemaining > 0) {
+      setRemainingTime(initialRemaining);
+    } else {
+      setLockoutTime(null);
+    }
+
+    return () => clearInterval(interval);
+  }, [lockoutTime, value, inputMode, countryDial]);
 
   const dispatch = useDispatch<AppDispatch>();
   const {
@@ -316,24 +385,26 @@ export default function LoginPage() {
     getFCMToken();
   }, []);
 
-  // Start 30s countdown when OTP step is shown
+  const startOtpTimer = () => {
+    setResendTimer(30);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Cleanup timer on unmount
   useEffect(() => {
-    if (step === "otp") {
-      setResendTimer(30);
-      timerRef.current = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [step]);
+  }, []);
 
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
@@ -343,18 +414,16 @@ export default function LoginPage() {
         inputMode === "email"
           ? { email: value }
           : { phone: fullPhone, ...(fcmToken ? { fcm_token: fcmToken } : {}) };
-      await dispatch(sendOtp(payload));
-      // Restart countdown
-      setResendTimer(30);
-      timerRef.current = setInterval(() => {
-        setResendTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      const result = await dispatch(sendOtp(payload));
+      if (sendOtp.fulfilled.match(result)) {
+        const uid =
+          result.payload?.user_id ??
+          result.payload?.userId ??
+          result.payload?.data?.user_id ??
+          result.payload?.data?.userId;
+        if (uid) setLocalUserId(String(uid));
+        startOtpTimer();
+      }
     } catch (error) {
       console.error("Error resending OTP:", error);
       // Error is already handled by Redux and will be displayed via apiError
@@ -387,6 +456,15 @@ export default function LoginPage() {
       if (step === "input" && value) {
         if (!validateInput()) return;
         dispatch(clearError());
+
+        const identifier = inputMode === "email" ? value : fullPhone;
+
+        // Skip sending a new OTP if we just sent one to the same identifier and the timer is running
+        if (identifier === lastOtpSentTo && resendTimer > 0 && localUserId) {
+          setStep("otp");
+          return;
+        }
+
         const payload =
           inputMode === "email"
             ? { email: value }
@@ -419,6 +497,8 @@ export default function LoginPage() {
           } else {
             // New user or not verified → OTP screen
             console.log("Showing OTP screen");
+            setLastOtpSentTo(identifier);
+            startOtpTimer();
             setStep("otp");
           }
         }
@@ -474,6 +554,7 @@ export default function LoginPage() {
   };
 
   const handlePasswordLogin = async () => {
+    if (lockoutTime) return;
     if (loginMode === "password" && !password) return;
     if (loginMode === "otp" && loginOtp.length < 4) return;
     try {
@@ -497,10 +578,36 @@ export default function LoginPage() {
         }
         // Refresh groups so dashboard shows latest data without reload
         dispatch(fetchGroups({}));
+        // Reset rate limiting on successful login
+        const identifier = getIdentifier();
+        if (identifier) {
+          localStorage.removeItem(`website_login_attempts_${identifier}`);
+          localStorage.removeItem(`website_login_lockout_${identifier}`);
+        }
+
         navigate("/dashboard");
+      } else {
+        handleFailedAttempt();
       }
     } catch (error) {
       console.error("Error in login:", error);
+      handleFailedAttempt();
+    }
+  };
+
+  const handleFailedAttempt = () => {
+    const identifier = getIdentifier();
+    if (!identifier) return;
+
+    const currentAttempts = parseInt(localStorage.getItem(`website_login_attempts_${identifier}`) || '0', 10);
+    const newAttempts = currentAttempts + 1;
+    localStorage.setItem(`website_login_attempts_${identifier}`, newAttempts.toString());
+    setFailedAttempts(newAttempts);
+
+    if (newAttempts >= 5) {
+      const lockoutEnd = Date.now() + 5 * 60 * 1000; // 5 minutes
+      localStorage.setItem(`website_login_lockout_${identifier}`, lockoutEnd.toString());
+      setLockoutTime(lockoutEnd);
     }
   };
 
@@ -517,6 +624,13 @@ export default function LoginPage() {
             };
       const result = await dispatch(sendOtp(payload));
       if (sendOtp.fulfilled.match(result)) {
+        const uid =
+          result.payload?.user_id ??
+          result.payload?.userId ??
+          result.payload?.data?.user_id ??
+          result.payload?.data?.userId;
+        if (uid) setLocalUserId(String(uid));
+        startOtpTimer();
         setLoginMode("otp");
         setLoginOtp("");
       }
@@ -645,8 +759,15 @@ export default function LoginPage() {
   const goBack = () => {
     if (step === 'selfie') setStep('details');
     else if (step === 'details') setStep('role');
-    else if (step === 'role') setStep('otp');
-    else if (step === 'otp') setStep('input');
+    else if (step === 'role') {
+      setStep('otp');
+      setOtp('');
+    }
+    else if (step === 'otp') {
+      setStep('input');
+      setOtp('');
+      setLoginOtp('');
+    }
     else if (step === 'password') {
       setStep('input');
       setLoginMode('password'); // reset so password field shows next time
@@ -1061,15 +1182,24 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    {apiError && (
-                      <p className="text-red-500 text-xs text-center">
+                    {lockoutTime ? (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 mb-2">
+                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-600 font-medium">
+                          Too many failed login attempts. Please try again in {Math.floor(remainingTime / 60)}m {remainingTime % 60}s.
+                        </p>
+                      </div>
+                    ) : apiError ? (
+                      <p className="text-red-500 text-xs text-center mb-2">
                         {apiError}
+                        {failedAttempts > 0 && failedAttempts < 5 && ` (${5 - failedAttempts} attempt${5 - failedAttempts === 1 ? '' : 's'} remaining)`}
                       </p>
-                    )}
+                    ) : null}
 
                     <AnimatedButton
                       onClick={handlePasswordLogin}
                       disabled={
+                        !!lockoutTime ||
                         (loginMode === "password"
                           ? !password
                           : loginOtp.length < 4) || loading

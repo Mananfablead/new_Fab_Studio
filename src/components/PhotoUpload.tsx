@@ -115,6 +115,15 @@ export default function PhotoUpload({ groupName = 'this group', onUploadComplete
     if (groupId && isOpen) {
       dispatch(fetchFolders(groupId));
     }
+    if (!isOpen) {
+      setFiles(prev => {
+        prev.forEach(f => URL.revokeObjectURL(f.preview));
+        return [];
+      });
+      setSelectedFolderId('');
+      setNewFolderName('');
+      setIsDragging(false);
+    }
   }, [groupId, isOpen, dispatch]);
 
   const handleActualUpload = async () => {
@@ -301,6 +310,19 @@ export default function PhotoUpload({ groupName = 'this group', onUploadComplete
           </div>
         )}
 
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={activeTab === 'images' ? 'image/*' : 'video/*'}
+          className="hidden"
+          onChange={e => {
+            if (e.target.files) {
+              addFiles(e.target.files);
+            }
+            e.target.value = '';
+          }}
+        />
         <div className="flex-1 overflow-y-auto space-y-4 pt-2">
           {files.length === 0 ? (
             <>
@@ -343,14 +365,6 @@ export default function PhotoUpload({ groupName = 'this group', onUploadComplete
                     : 'border-border hover:border-primary/40 hover:bg-muted/30'
                 }`}
               >
-                <input
-                  ref={inputRef}
-                  type="file"
-                  multiple
-                  accept={activeTab === 'images' ? 'image/*' : 'video/*'}
-                  className="hidden"
-                  onChange={e => e.target.files && addFiles(e.target.files)}
-                />
                 <div className="flex flex-col items-center gap-3">
                   <div className={`w-16 h-16 rounded-xl flex items-center justify-center transition-colors ${isDragging ? 'bg-primary/10' : 'bg-muted'}`}>
                     {activeTab === 'images' ? (
@@ -528,6 +542,7 @@ export default function PhotoUpload({ groupName = 'this group', onUploadComplete
           <div className="flex gap-2">
             {!isUploadingActive && (
               <button 
+                type="button"
                 onClick={() => inputRef.current?.click()} 
                 className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors flex items-center gap-1.5"
               >

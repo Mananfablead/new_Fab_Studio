@@ -50,7 +50,7 @@ import GroupBrandingSettings from "./components/group-settings/BrandingSettings"
 import FavoritesSettings from "./components/group-settings/FavoritesSettings";
 import NotFound from "./pages/NotFound";
 import SetPasswordModal from "./components/modals/SetPasswordModal";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { checkPassword, logout } from "@/store/slices/authSlice";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -59,6 +59,15 @@ import InvitePage from "./pages/InvitePage";
 import ScrollToTop from "./components/ScrollToTop";
 import SEOHead from "./components/SEOHead";
 import SubscriptionPlansModal from "./components/modals/SubscriptionPlansModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useUserPlans } from "@/hooks/useUserPlans";
 import { useMaintenance } from "@/hooks/useMaintenance";
 import MaintenancePage from "./pages/MaintenancePage";
@@ -115,6 +124,7 @@ function PhotographerPlanGate({ children }: { children: React.ReactNode }) {
   const { isCheckingPlan, isPlanLocked, error } = usePhotographerPlanLock();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [showPlanAlert, setShowPlanAlert] = useState(false);
 
   const handleForcedInquiryClose = () => {
     dispatch(logout());
@@ -144,9 +154,24 @@ function PhotographerPlanGate({ children }: { children: React.ReactNode }) {
       </div>
       <SubscriptionPlansModal
         open={true}
-        onOpenChange={() => undefined}
+        onOpenChange={(open) => {
+          if (!open) setShowPlanAlert(true);
+        }}
         onInquiryClose={handleForcedInquiryClose}
       />
+      <AlertDialog open={showPlanAlert} onOpenChange={setShowPlanAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Plan Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              You must select a subscription plan to continue using the application. Please choose a plan that fits your needs.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowPlanAlert(false)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -175,19 +200,10 @@ function GlobalAuthCheck() {
       try {
         const token = await requestNotificationPermission();
         if (token) {
-          console.log("Firebase notifications initialized successfully");
-
           // Listen for foreground messages
           onMessageListener()
             .then(async (payload) => {
               if (payload) {
-                console.log("Foreground notification received:", payload);
-                console.log(
-                  "Notification permission:",
-                  Notification.permission,
-                );
-                console.log("Notification data:", payload.notification);
-
                 // Show notification in foreground
                 if (payload.notification) {
                   // Handle different notification data structures
@@ -204,12 +220,6 @@ function GlobalAuthCheck() {
                     title = "Notification";
                     body = "You have a new message";
                   }
-
-                  console.log("Creating notification with:", {
-                    title,
-                    body,
-                    notificationType: typeof payload.notification,
-                  });
 
                   // Show notification via Service Worker (works in foreground + background)
                   if (Notification.permission === "granted") {
@@ -281,27 +291,23 @@ function GlobalAuthCheck() {
                         "Error creating browser notification:",
                         error,
                       );
-                      console.log("Notification content:", `${title}: ${body}`);
                     }
                   } else {
                     console.log("Notification permission not granted");
-                    console.log("Notification content:", `${title}: ${body}`);
                   }
                 } else {
-                  console.log("No notification data in payload");
+                  // No notification data in payload
                 }
               }
             })
-            .catch((err) =>
-              console.log("Failed to receive foreground messages:", err),
-            );
+            .catch((err) => {
+              // Failed to receive foreground messages
+            });
         } else {
-          console.log(
-            "Firebase notifications not available - this is normal if Firebase is not configured",
-          );
+          // Firebase notifications not available
         }
       } catch (error) {
-        console.error("Failed to initialize notifications:", error);
+        // Failed to initialize notifications
       }
     };
 
@@ -310,9 +316,6 @@ function GlobalAuthCheck() {
     // Add test notification function to window for debugging
     if (typeof window !== "undefined") {
       window.testNotification = testNotification;
-      console.log(
-        "testNotification() function added to window. Call it in console to test.",
-      );
     }
   }, []);
 

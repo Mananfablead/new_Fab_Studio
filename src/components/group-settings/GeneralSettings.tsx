@@ -89,10 +89,10 @@ export default function GeneralSettings({
   const [coverImage, setCoverImage] = useState(propCoverImage || group.coverImage);
   const [groupType, setGroupType] = useState<"private" | "public">(group.type || "public");
   const [eventType, setEventType] = useState<EventType | string>(group.eventType || "wedding");
-  const [sortOrder, setSortOrder] = useState(propSortOrder || group.sortBy || 'newest');
+  const [sortOrder, setSortOrder] = useState(propSortOrder || (group as any).sortBy || 'newest');
   const [eventDate, setEventDate] = useState(propEventDate || group.eventDate || '');
   const [description, setDescription] = useState(propDescription || group.description || '');
-  const [watermarkEnabled, setWatermarkEnabled] = useState(propWatermarkEnabled ?? group.enableWatermark ?? false);
+  const [watermarkEnabled, setWatermarkEnabled] = useState(propWatermarkEnabled ?? (group as any).enableWatermark ?? false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync state with group data when it changes
@@ -101,11 +101,11 @@ export default function GeneralSettings({
     setCoverImage(propCoverImage || group.coverImage);
     setGroupType(group.type || "public");
     setEventType(group.eventType || "wedding");
-    setSortOrder(propSortOrder || group.sortBy || 'newest');
+    setSortOrder(propSortOrder || (group as any).sortBy || 'newest');
     setEventDate(propEventDate || group.eventDate || '');
     setDescription(propDescription || group.description || '');
-    setWatermarkEnabled(propWatermarkEnabled ?? group.enableWatermark ?? false);
-  }, [group.id, group.name, group.sortBy, group.enableWatermark, group.eventDate, group.description, group.coverImage, group.type, group.eventType]);
+    setWatermarkEnabled(propWatermarkEnabled ?? (group as any).enableWatermark ?? false);
+  }, [group.id, group.name, (group as any).sortBy, (group as any).enableWatermark, group.eventDate, group.description, group.coverImage, group.type, group.eventType]);
 
   const handleSaveGeneralSettings = async () => {
     if (apiMode === 'mock') {
@@ -226,7 +226,7 @@ export default function GeneralSettings({
                 <Users className="w-6 h-6 sm:w-5 sm:h-5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <p className="text-2xl sm:text-xl font-bold text-foreground">{group.memberCount || group.participantCount || 0}</p>
+                <p className="text-2xl sm:text-xl font-bold text-foreground">{(group as any).memberCount || group.participantCount || 0}</p>
                 <p className="text-sm sm:text-xs text-muted-foreground">Participants</p>
               </div>
             </div>
