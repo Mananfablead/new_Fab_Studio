@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   LogOut,
   DollarSign,
+  DownloadCloud,
 } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +44,7 @@ import PrivacySettings from '../components/group-settings/PrivacySettings';
 import FoldersSettings from '../components/group-settings/FoldersSettings';
 import DesignSettings from '../components/group-settings/DesignSettings';
 import ViewDownloadSettings from '../components/group-settings/ViewDownloadSettings';
+import DownloadHistorySettings from '../components/group-settings/DownloadHistorySettings';
 import FlipbookSettings from '../components/group-settings/FlipbookSettings';
 import BrandingSettings from '../components/group-settings/BrandingSettings';
 import FavoritesSettings from '../components/group-settings/FavoritesSettings';
@@ -55,6 +57,7 @@ type TabType =
   | 'folders'
   | 'design'
   | 'viewDownload'
+  | 'downloadHistory'
   | 'flipbook'
   | 'branding'
   | 'favorites'
@@ -188,8 +191,8 @@ export default function GroupSettings() {
     { key: 'participants', label: 'Participants', icon: <Users className="w-5 h-5" /> },
     { key: 'privacy', label: 'Privacy Settings', icon: <Shield className="w-5 h-5" /> },
     { key: 'folders', label: 'Folders', icon: <FolderOpen className="w-5 h-5" /> },
-    // { key: 'design', label: 'Design', icon: <Palette className="w-5 h-5" /> },
     { key: 'viewDownload', label: 'View & Download', icon: <Eye className="w-5 h-5" /> },
+    { key: 'downloadHistory', label: 'Download History', icon: <DownloadCloud className="w-5 h-5" /> },
     { key: 'flipbook', label: 'Digital Flipbook', icon: <BookOpen className="w-5 h-5" /> },
     { key: 'branding', label: 'Branding & Sponsors', icon: <Sparkles className="w-5 h-5" /> },
     { key: 'favorites', label: 'Client Favorite', icon: <Heart className="w-5 h-5" /> },
@@ -291,6 +294,8 @@ export default function GroupSettings() {
         return <DesignSettings />;
       case 'viewDownload':
         return <ViewDownloadSettings />;
+      case 'downloadHistory':
+        return <DownloadHistorySettings />;
       case 'flipbook':
         return <FlipbookSettings />;
       case 'branding':
@@ -400,7 +405,7 @@ export default function GroupSettings() {
                     <button
                       key={tab.key}
                       onClick={() => setActiveTab(tab.key)}
-                      className={`relative flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all group overflow-hidden ${activeTab === tab.key
+                      className={`relative flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all group ${activeTab === tab.key
                         ? 'text-primary bg-primary/10'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         }`}
@@ -408,7 +413,7 @@ export default function GroupSettings() {
                       {activeTab === tab.key && (
                         <motion.div
                           layoutId="active-tab"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1/2 bg-gradient-to-b from-[hsl(var(--fab-amber))] to-primary rounded-r-full"
+                          className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-md"
                         />
                       )}
                       <div className="flex items-center gap-3">

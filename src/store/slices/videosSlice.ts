@@ -41,7 +41,7 @@ const initialState: VideosState = {
  */
 export const downloadVideo = createAsyncThunk(
   'videos/download',
-  async (videoId: string, { rejectWithValue }) => {
+  async (videoId: string, { getState, rejectWithValue }) => {
     try {
       const response = await api.get(`/videos/${videoId}/download`, {
         responseType: 'blob',
@@ -69,6 +69,30 @@ export const downloadVideo = createAsyncThunk(
       // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      // Log download history
+      try {
+        const state = getState() as any;
+        const groupId = state.groups?.currentGroup?.id;
+        const userId = state.auth?.user?.id;
+        
+        if (groupId && userId) {
+          const isFirstTime = !localStorage.getItem(`downloaded_video_${videoId}`);
+          const downloadType = isFirstTime ? 'unique' : 'repetitive';
+          
+          api.post('/downloads/history', {
+            participants_id: userId,
+            photo_id: [videoId],
+            file_type: 'video',
+            download_type: downloadType,
+            group_id: groupId
+          }).then(() => {
+            localStorage.setItem(`downloaded_video_${videoId}`, 'true');
+          }).catch(console.error);
+        }
+      } catch (e) {
+        console.error('Failed to log video download history', e);
+      }
 
       return videoId;
     } catch (err: any) {

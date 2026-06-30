@@ -14,7 +14,6 @@ export interface Photo {
   isPremium?: boolean;
   isSelectedByClient?: boolean;
   is_selected_by_client?: boolean;
-  is_selected_by_client?: boolean;
   is_in_flipbook?: boolean;
   groupId?: string;
   folderId?: string;
@@ -271,7 +270,7 @@ export const updatePhotoTags = createAsyncThunk(
 
 export const downloadPhoto = createAsyncThunk(
   'photos/download',
-  async (photoId: string, { rejectWithValue }) => {
+  async (photoId: string, { getState, rejectWithValue }) => {
     try {
       // Always download without watermark - watermark is for display only
       const response = await api.get(`/photos/${photoId}/download?no_watermark=1`, {
@@ -301,6 +300,30 @@ export const downloadPhoto = createAsyncThunk(
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
+      // Log download history
+      try {
+        const state = getState() as any;
+        const groupId = state.groups?.currentGroup?.id;
+        const userId = state.auth?.user?.id;
+        
+        if (groupId && userId) {
+          const isFirstTime = !localStorage.getItem(`downloaded_photo_${photoId}`);
+          const downloadType = isFirstTime ? 'unique' : 'repetitive';
+          
+          api.post('/downloads/history', {
+            participants_id: userId,
+            photo_id: [photoId],
+            file_type: 'photo',
+            download_type: downloadType,
+            group_id: groupId
+          }).then(() => {
+            localStorage.setItem(`downloaded_photo_${photoId}`, 'true');
+          }).catch(console.error);
+        }
+      } catch (e) {
+        console.error('Failed to log download history', e);
+      }
+
       return photoId;
     } catch (err: any) {
       const message = err.response?.data?.message || 'Failed to download photo';
@@ -325,7 +348,7 @@ export const downloadPhotos = createAsyncThunk(
       downloadType = 'all',
       photoIds,
     }: { groupId: string; downloadType?: 'all' | 'specific'; photoIds?: string[] },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
       const formData = new FormData();
@@ -364,6 +387,39 @@ export const downloadPhotos = createAsyncThunk(
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      // Log bulk download history
+      try {
+        const state = getState() as any;
+        const userId = state.auth?.user?.id;
+        
+        if (userId && groupId) {
+          const payload: any = {
+            participants_id: userId,
+            download_type: 'Bulk',
+            file_type: 'photo',
+            group_id: groupId,
+            photo_id: []
+          };
+          
+          if (downloadType === 'specific' && photoIds && photoIds.length > 0) {
+            photoIds.forEach((id) => {
+              payload.photo_id.push(id);
+              localStorage.setItem(`downloaded_photo_${id}`, 'true');
+            });
+          } else {
+            const allPhotos = state.photos?.photos || [];
+            allPhotos.forEach((p: any) => {
+              payload.photo_id.push(p.id);
+              localStorage.setItem(`downloaded_photo_${p.id}`, 'true');
+            });
+          }
+          
+          api.post('/downloads/history', payload).catch(console.error);
+        }
+      } catch (e) {
+        console.error('Failed to log bulk download history', e);
+      }
 
       return { groupId, downloadType };
     } catch (err: any) {
