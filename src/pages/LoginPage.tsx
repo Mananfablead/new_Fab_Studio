@@ -33,7 +33,7 @@ import {
   onMessageListener,
 } from "../notification";
 import { getToken } from "firebase/messaging";
-import { messaging } from "../firebase";
+import { messaging } from "../config/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 const professionalBg =
   "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=1920&q=80";
