@@ -76,14 +76,6 @@ import {
   requestNotificationPermission,
   onMessageListener,
 } from "./notification";
-import { testNotification } from "./testNotification";
-
-// Extend Window interface to include testNotification function
-declare global {
-  interface Window {
-    testNotification?: () => boolean;
-  }
-}
 
 const queryClient = new QueryClient();
 
@@ -312,11 +304,6 @@ function GlobalAuthCheck() {
     };
 
     initNotifications();
-
-    // Add test notification function to window for debugging
-    if (typeof window !== "undefined") {
-      window.testNotification = testNotification;
-    }
   }, []);
 
   return <SetPasswordModal />;
