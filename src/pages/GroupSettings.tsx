@@ -361,12 +361,12 @@ export default function GroupSettings() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
 
           {/* Navigation Sidebar / Mobile Pills */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0">
             <div className="md:sticky md:top-24">
 
               {/* Mobile View: Horizontal Tabs (Pills) */}
-              <div className="lg:hidden relative mb-3 md:mb-6">
-                <div className="flex overflow-x-auto pb-4 gap-2 !scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="lg:hidden relative mb-3 md:mb-6 w-full">
+                <div className="flex overflow-x-auto pb-4 gap-2 w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {tabs.map((tab) => {
                     const isBlocked = isBlockedTab(tab.key);
                     return (

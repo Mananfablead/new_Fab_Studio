@@ -224,7 +224,7 @@ export default function HelpPage() {
                   </label>
                   <input
                     type="tel"
-                    value={user?.phone || ""}
+                    value={user?.phone ? user.phone.replace(/[^\d+]/g, '') : ""}
                     disabled
                     className="w-full px-4 py-3 rounded-lg border border-input bg-muted text-sm font-medium text-foreground focus:outline-none cursor-not-allowed opacity-75"
                   />

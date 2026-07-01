@@ -190,15 +190,16 @@ export default function ViewDownloadSettings() {
             )}
 
             {/* Bulk Downloads */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
+            <div className={`flex items-center justify-between p-4 rounded-xl border border-border bg-card transition-opacity ${!allowDownloading ? 'opacity-50' : ''}`}>
               <div className="flex-1">
                 <h4 className="font-semibold mb-1">Bulk Downloads</h4>
                 <p className="text-sm text-muted-foreground">Allow users to download all photos at once</p>
               </div>
               {hasBulkDownload ? (
                 <Switch
-                  checked={enableBulkDownloads}
+                  checked={allowDownloading && enableBulkDownloads}
                   onCheckedChange={setEnableBulkDownloads}
+                  disabled={!allowDownloading}
                 />
               ) : (
                 <div className="flex items-center gap-3 shrink-0">
@@ -207,7 +208,8 @@ export default function ViewDownloadSettings() {
                   </span>
                   <button
                     onClick={() => setShowPlansModal(true)}
-                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-[hsl(var(--fab-amber))] text-white hover:opacity-90 transition-all uppercase tracking-wider whitespace-nowrap"
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-[hsl(var(--fab-amber))] text-white hover:opacity-90 transition-all uppercase tracking-wider whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!allowDownloading}
                   >
                     Upgrade Plan
                   </button>

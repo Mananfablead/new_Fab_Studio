@@ -75,11 +75,11 @@ export const downloadVideo = createAsyncThunk(
         const state = getState() as any;
         const groupId = state.groups?.currentGroup?.id;
         const userId = state.auth?.user?.id;
-        
+
         if (groupId && userId) {
           const isFirstTime = !localStorage.getItem(`downloaded_video_${videoId}`);
           const downloadType = isFirstTime ? 'unique' : 'repetitive';
-          
+
           api.post('/downloads/history', {
             participants_id: userId,
             photo_id: [videoId],
@@ -111,13 +111,13 @@ export const fetchVideos = createAsyncThunk(
   async (groupId: string, { rejectWithValue }) => {
     try {
       const { data } = await api.get(`/groups/${groupId}/videos`);
-      
+
       // Handle various API response shapes (common in this codebase)
       let videos = data.data || data.videos || data.items || data;
       if (!Array.isArray(videos)) {
         videos = videos.data || videos.videos || videos.items || [];
       }
-      
+
       return {
         videos: videos as Video[],
         total: data.pagination?.total ?? data.meta?.total ?? videos.length,
