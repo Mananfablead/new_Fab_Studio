@@ -57,6 +57,7 @@ import { toast } from "@/hooks/use-toast";
 import fableadLogo from "@/assets/iamges/fabstudio_logo.png";
 import placeholderImage from "/placeholder.svg";
 import { useReduxPhotos } from "@/hooks/useReduxPhotos";
+import { useUserPlans } from "@/hooks/useUserPlans";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   selectApiMode,
@@ -450,10 +451,19 @@ export default function PhotoGallery() {
   // View & Download Settings
   const viewDownload = safeGroup.viewDownload;
   const allowDownloading = viewDownload?.allowDownloading ?? true;
-  const bulkDownloads = viewDownload?.bulkDownloads ?? true;
+  const bulkDownloads = viewDownload?.bulkDownloads ?? false;
   const enableScreenshots = viewDownload?.enableScreenshots ?? true;
 
   const isBypassUser = isGroupOwner; // isGroupOwner already includes owner, team, and admin checks
+
+  // Plan check: Owner can only use bulk download if their plan has the feature
+  const { userPlansData } = useUserPlans();
+  const ownerPlan = userPlansData?.data?.plans?.[0];
+  const ownerPlanInfo = userPlansData?.data?.user;
+  const ownerHasBulkDownloadPlan = !!(ownerPlan?.has_bulk_download) || !!(ownerPlanInfo?.has_bulk_download);
+  // Owner: show only if plan has has_bulk_download
+  // Guest: show only if group setting bulkDownloads is enabled (owner could only enable it with plan)
+  const canBulkDownload = isBypassUser ? ownerHasBulkDownloadPlan : bulkDownloads;
 
   // Group photos by date
   const photosByDate = localPhotos.reduce(
@@ -1234,13 +1244,18 @@ export default function PhotoGallery() {
                     </div>
                   )}
 
-                  {(bulkDownloads || isBypassUser) && (
+                  {canBulkDownload && (
                     <button
                       onClick={handleDownload}
-                      className="relative p-2 rounded-xl text-muted-foreground"
+                      disabled={bulkDownloadLoading}
+                      className="relative p-2 rounded-xl text-muted-foreground disabled:opacity-50"
                     >
-                      <Download className="w-5 h-5" />
-                      {selectedPhotos.size > 0 && (
+                      {bulkDownloadLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      ) : (
+                        <Download className="w-5 h-5" />
+                      )}
+                      {!bulkDownloadLoading && selectedPhotos.size > 0 && (
                         <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 bg-gradient-to-br from-[hsl(var(--fab-amber))] to-orange-500 text-white text-[8px] rounded-full flex items-center justify-center font-bold">
                           {selectedPhotos.size}
                         </span>
@@ -1324,18 +1339,25 @@ export default function PhotoGallery() {
                   )}
 
                   {/* Download Button */}
-                  {(bulkDownloads || isBypassUser) && (
+                  {canBulkDownload && (
                     <button
                       onClick={handleDownload}
-                      className="relative p-2.5 rounded-xl hover:bg-black/5 transition-all duration-300 group"
+                      disabled={bulkDownloadLoading}
+                      className="relative p-2.5 rounded-xl hover:bg-black/5 transition-all duration-300 group disabled:opacity-50"
                       title={
-                        selectedPhotos.size > 0
-                          ? `Download ${selectedPhotos.size} selected`
-                          : "Download All"
+                        bulkDownloadLoading
+                          ? "Downloading..."
+                          : selectedPhotos.size > 0
+                            ? `Download ${selectedPhotos.size} selected`
+                            : "Download All"
                       }
                     >
-                      <Download className="relative w-5 h-5 text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                      {selectedPhotos.size > 0 && (
+                      {bulkDownloadLoading ? (
+                        <Loader2 className="relative w-5 h-5 text-primary animate-spin" />
+                      ) : (
+                        <Download className="relative w-5 h-5 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                      )}
+                      {!bulkDownloadLoading && selectedPhotos.size > 0 && (
                         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-[hsl(var(--fab-amber))] to-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg">
                           {selectedPhotos.size}
                         </span>
@@ -1578,12 +1600,17 @@ export default function PhotoGallery() {
                       ? "Deselect All"
                       : "Select All"}
                   </button>
-                  {(bulkDownloads || isBypassUser) && (
+                  {canBulkDownload && (
                     <button
                       onClick={handleDownload}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
                     >
-                      <Download className="w-4 h-4" /> Download
+                      {bulkDownloadLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
+                      {bulkDownloadLoading ? "Downloading..." : "Download"}
                     </button>
                   )}
                   <button

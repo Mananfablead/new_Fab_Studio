@@ -167,7 +167,7 @@ export function useReduxPhotos(groupId: string | undefined) {
     if (!groupId) return;
 
     // Permission check for bulk download
-    const bulkDownloads = currentGroup?.viewDownload?.bulkDownloads ?? true;
+    const bulkDownloads = currentGroup?.viewDownload?.bulkDownloads ?? false;
     if (!bulkDownloads && !isBypassUser) {
       toast({
         title: 'Bulk Download Restricted',
