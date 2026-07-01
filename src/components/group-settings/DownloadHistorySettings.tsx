@@ -117,9 +117,9 @@ export default function DownloadHistorySettings() {
           
           setSummary({
             total_downloads: deduplicatedData.length,
-            total_unique: deduplicatedData.filter(r => r.download_type === 'unique').length,
-            total_repetitive: deduplicatedData.filter(r => r.download_type === 'repetitive').length,
-            total_bulk: deduplicatedData.filter(r => r.download_type === 'bulk').length,
+            total_unique: deduplicatedData.filter(r => r.download_type?.toLowerCase() === 'unique').length,
+            total_repetitive: deduplicatedData.filter(r => r.download_type?.toLowerCase() === 'repetitive').length,
+            total_bulk: deduplicatedData.filter(r => r.download_type?.toLowerCase() === 'bulk').length,
           });
         } else {
           throw new Error('Failed to fetch history');
