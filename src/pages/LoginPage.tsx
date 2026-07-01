@@ -612,6 +612,10 @@ export default function LoginPage() {
   };
 
   const handleSendLoginOtp = async () => {
+    if (resendTimer > 0) {
+      setLoginMode("otp");
+      return;
+    }
     try {
       dispatch(clearError());
       const payload =
@@ -1179,6 +1183,18 @@ export default function LoginPage() {
                           OTP will be sent to your{" "}
                           {inputMode === "email" ? "email" : "phone"}
                         </p>
+                        <div className="flex items-center justify-center mt-3">
+                          <button
+                            type="button"
+                            onClick={handleSendLoginOtp}
+                            disabled={resendTimer > 0 || otpLoading}
+                            className={`text-xs font-medium transition-colors ${resendTimer > 0 ? "text-gray-400 cursor-not-allowed" : "text-[hsl(var(--fab-amber))] hover:underline"}`}
+                          >
+                            {resendTimer > 0
+                              ? `Resend OTP in ${resendTimer}s`
+                              : "Resend OTP"}
+                          </button>
+                        </div>
                       </div>
                     )}
 

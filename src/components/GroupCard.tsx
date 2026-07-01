@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Camera, Users, Calendar, Trash2, LogOut, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { deleteGroup, leaveGroup } from '@/store/slices/groupsSlice';
 import { toast } from '@/hooks/use-toast';
 import type { Group } from '@/lib/mock-data';
@@ -11,6 +11,12 @@ import DeleteGroupModal from './modals/DeleteGroupModal';
 export default function GroupCard({ group, viewMode = 'grid' }: { group: Group; viewMode?: 'grid' | 'list' | 'compact' | 'masonry' }) {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  
+  const isOwner = group.createdBy === String(currentUser?.id) || 
+                  group.ownerId === String(currentUser?.id) || 
+                  (group as any).owner_id === String(currentUser?.id);
+
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -94,7 +100,7 @@ export default function GroupCard({ group, viewMode = 'grid' }: { group: Group; 
         onClick={() => navigate(`/gallery/${group.id}`)}
         className={`group cursor-pointer bg-card rounded-xl overflow-hidden border border-border fab-shadow hover:fab-shadow-lg transition-all duration-300 hover:-translate-y-1 relative ${viewMode === 'list' ? 'flex flex-col sm:flex-row h-auto sm:h-32' :
             viewMode === 'compact' ? 'break-inside-avoid' :
-              viewMode === 'masonry' ? 'break-inside-avoid mb-5' : ''
+              viewMode === 'masonry' ? 'break-inside-avoid mb-5' : 'flex flex-col'
           }`}
       >
       {viewMode === 'list' ? (
@@ -134,20 +140,24 @@ export default function GroupCard({ group, viewMode = 'grid' }: { group: Group; 
                   <span>{formatDate(group.createdAt)}</span>
                 </span>
                 <div className="hidden md:flex gap-2 mt-2">
-                  <button
-                    onClick={handleLeave}
-                    className="px-3 py-2 text-xs font-medium bg-orange-500/10 text-orange-600 rounded-lg hover:bg-orange-500/20 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Leave
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="px-3 py-2 text-xs font-medium bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
+                  {!isOwner && (
+                    <button
+                      onClick={handleLeave}
+                      className="px-3 py-2 text-xs font-medium bg-orange-500/10 text-orange-600 rounded-lg hover:bg-orange-500/20 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Leave
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={handleDelete}
+                      className="px-3 py-2 text-xs font-medium bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -217,7 +227,7 @@ export default function GroupCard({ group, viewMode = 'grid' }: { group: Group; 
               </div>
 
               {/* Content on hover */}
-              <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4 z-10">
+              <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4 pb-[60px] sm:pb-[68px] z-10">
                 <h3 className="font-heading font-semibold text-sm sm:text-base text-white truncate drop-shadow-md">{group.name}</h3>
                 <div>
                   <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-white/90 drop-shadow-sm mb-2">
@@ -234,6 +244,28 @@ export default function GroupCard({ group, viewMode = 'grid' }: { group: Group; 
           )}
         </>
       )}
+            {viewMode !== 'list' && (
+            <div className="flex gap-2 p-3 sm:p-4 pt-0 z-30 relative mt-auto bg-card group-hover:bg-card/95 backdrop-blur-sm">
+              {!isOwner && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleLeave(e); }}
+                  className="flex-1 px-3 py-2 text-xs font-semibold bg-orange-500/10 text-orange-600 rounded-lg hover:bg-orange-500/20 transition-all duration-300 flex items-center justify-center gap-1.5"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Leave
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDelete(e); }}
+                  className="flex-1 px-3 py-2 text-xs font-semibold bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-all duration-300 flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
       </div>
     </>
   );

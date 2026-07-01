@@ -264,11 +264,24 @@ export default function GeneralSettings({
           Cover Image
         </label>
         <div className="relative group rounded-xl overflow-hidden border-2 border-border bg-muted h-40 sm:h-52">
-          <img
-            src={coverImage}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
+          {coverImage ? (
+            <img
+              src={coverImage}
+              alt="Cover"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('unsplash')) {
+                  target.src = 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1200&q=80';
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+              <ImageIcon className="w-10 h-10 mb-2 opacity-30" />
+              <span className="text-sm font-medium opacity-70">No cover image</span>
+            </div>
+          )}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
             <button
               type="button"

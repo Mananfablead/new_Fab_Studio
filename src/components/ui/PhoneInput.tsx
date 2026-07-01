@@ -62,6 +62,8 @@ interface PhoneInputProps {
   className?: string;
   /** Extra classes for the wrapper (e.g. error state) */
   wrapperClassName?: string;
+  /** Whether the country code is fixed and cannot be changed */
+  fixedCountry?: boolean;
 }
 
 export default function PhoneInput({
@@ -72,6 +74,7 @@ export default function PhoneInput({
   placeholder = '9876543210',
   className = '',
   wrapperClassName = '',
+  fixedCountry = false,
 }: PhoneInputProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -94,12 +97,14 @@ export default function PhoneInput({
       {/* Country selector button */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-3 border-r border-input text-foreground text-sm shrink-0 hover:bg-muted transition-colors rounded-l-xl"
+        onClick={() => !fixedCountry && setOpen(o => !o)}
+        className={`flex items-center gap-1.5 px-3 py-3 border-r border-input text-foreground text-sm shrink-0 rounded-l-xl ${
+          fixedCountry ? 'cursor-default' : 'hover:bg-muted transition-colors'
+        }`}
       >
         <span className="text-base leading-none">{selected.flag}</span>
         <span className="font-mono text-xs text-muted-foreground">{selected.dial}</span>
-        <ChevronDown className="w-3 h-3 text-muted-foreground" />
+        {!fixedCountry && <ChevronDown className="w-3 h-3 text-muted-foreground" />}
       </button>
 
       {/* Dropdown */}

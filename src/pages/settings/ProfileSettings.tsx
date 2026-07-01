@@ -411,6 +411,7 @@ export default function ProfileSettings() {
                     }}
                     countryDial={countryDial}
                     onCountryChange={setCountryDial}
+                    fixedCountry={true}
                     wrapperClassName={phoneError ? "border-red-500" : ""}
                   />
                   {phoneError && (

@@ -85,7 +85,7 @@ import {
   toggleSelection,
   matchFacesForPhoto,
 } from "@/store/slices/photosSlice";
-import { fetchVideos } from "@/store/slices/videosSlice";
+import { fetchVideos, downloadVideo } from "@/store/slices/videosSlice";
 import api from "@/services/api";
 import SEOHead from "@/components/SEOHead";
 
@@ -98,6 +98,8 @@ export default function PhotoGallery() {
   const { user: authUser } = useAuth();
   const reduxUser = useAppSelector(selectUser);
   const user = reduxUser || authUser;
+  // Existing code continues...
+
 
   // Permission check using the resolved user (Redux-first) so it works before AuthContext syncs
   const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -169,6 +171,9 @@ export default function PhotoGallery() {
   // Videos state
   const videos = useAppSelector((state) => state.videos.videos);
   const videosLoading = useAppSelector((state) => state.videos.loading);
+  // Selection & bulk download state for videos
+  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
+  const [bulkVideoDownloadLoading, setBulkVideoDownloadLoading] = useState(false);
 
   // Redux photos hook
   const {
@@ -453,6 +458,7 @@ export default function PhotoGallery() {
   const allowDownloading = viewDownload?.allowDownloading ?? true;
   const bulkDownloads = viewDownload?.bulkDownloads ?? false;
   const enableScreenshots = viewDownload?.enableScreenshots ?? true;
+  const enableSharing = viewDownload?.enableSharing ?? true;
 
   const isBypassUser = isGroupOwner; // isGroupOwner already includes owner, team, and admin checks
 
@@ -548,10 +554,18 @@ export default function PhotoGallery() {
   };
 
   const selectAll = () => {
-    if (selectedPhotos.size === filteredPhotos.length) {
-      setSelectedPhotos(new Set());
+    if (activeTab === "videos") {
+      if (selectedVideoIds.length === videos.length) {
+        setSelectedVideoIds([]);
+      } else {
+        setSelectedVideoIds(videos.map((v) => v.id));
+      }
     } else {
-      setSelectedPhotos(new Set(filteredPhotos.map((p) => p.id)));
+      if (selectedPhotos.size === filteredPhotos.length) {
+        setSelectedPhotos(new Set());
+      } else {
+        setSelectedPhotos(new Set(filteredPhotos.map((p) => p.id)));
+      }
     }
   };
 
@@ -674,6 +688,7 @@ export default function PhotoGallery() {
   const exitSelectionMode = () => {
     setSelectionMode(false);
     setSelectedPhotos(new Set());
+    setSelectedVideoIds([]);
   };
 
   const handleDelete = async () => {
@@ -703,8 +718,21 @@ export default function PhotoGallery() {
     exitSelectionMode();
   };
 
-  const handleDownload = () => {
-    if (!hasPermission("download_photos") && !isTeamMember) {
+  const handleDownload = async () => {
+    if (activeTab === "videos") {
+      if (!canBulkDownload) {
+        toast({
+          title: "Permission Denied",
+          description: "You do not have permission to bulk download.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setShowDownloadConfirm(true);
+      return;
+    }
+
+    if (!hasPermission("download_photos") && !isTeamMember && !isGroupOwner) {
       toast({
         title: "Permission Denied",
         description: "You do not have permission to download photos.",
@@ -758,6 +786,39 @@ export default function PhotoGallery() {
 
   const confirmDownload = async () => {
     setShowDownloadConfirm(false);
+
+    if (activeTab === "videos") {
+      setBulkVideoDownloadLoading(true);
+      try {
+        if (selectedVideoIds.length > 0) {
+          await Promise.all(
+            selectedVideoIds.map((vid) => dispatch(downloadVideo(vid)))
+          );
+          toast({
+            title: "Downloaded",
+            description: `${selectedVideoIds.length} video(s) downloaded successfully.`,
+          });
+        } else {
+          await Promise.all(
+            videos.map((vid) => dispatch(downloadVideo(vid.id)))
+          );
+          toast({
+            title: "Downloaded",
+            description: `All ${videos.length} video(s) downloaded successfully.`,
+          });
+        }
+        exitSelectionMode();
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Failed to download videos.",
+          variant: "destructive",
+        });
+      } finally {
+        setBulkVideoDownloadLoading(false);
+      }
+      return;
+    }
 
     if (apiMode === "live" && groupId) {
       if (selectedPhotos.size > 0) {
@@ -1244,7 +1305,7 @@ export default function PhotoGallery() {
                     </div>
                   )}
 
-                  {canBulkDownload && (
+                  {allowDownloading && canBulkDownload && (
                     <button
                       onClick={handleDownload}
                       disabled={bulkDownloadLoading}
@@ -1263,12 +1324,14 @@ export default function PhotoGallery() {
                     </button>
                   )}
 
-                  <button
-                    onClick={handleShare}
-                    className="p-2 rounded-xl text-muted-foreground"
-                  >
-                    <Share2 className="w-5 h-5" />
-                  </button>
+                  {enableSharing && (
+                    <button
+                      onClick={handleShare}
+                      className="p-2 rounded-xl text-muted-foreground"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  )}
 
                   <button
                     onClick={() =>
@@ -1339,7 +1402,7 @@ export default function PhotoGallery() {
                   )}
 
                   {/* Download Button */}
-                  {canBulkDownload && (
+                  {allowDownloading && canBulkDownload && (
                     <button
                       onClick={handleDownload}
                       disabled={bulkDownloadLoading}
@@ -1366,13 +1429,15 @@ export default function PhotoGallery() {
                   )}
 
                   {/* Share Button */}
-                  <button
-                    onClick={handleShare}
-                    className="relative p-2.5 rounded-xl hover:bg-black/5 transition-all duration-300 group"
-                    title="Share Album"
-                  >
-                    <Share2 className="relative w-5 h-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
-                  </button>
+                  {enableSharing && (
+                    <button
+                      onClick={handleShare}
+                      className="relative p-2.5 rounded-xl hover:bg-black/5 transition-all duration-300 group"
+                      title="Share Album"
+                    >
+                      <Share2 className="relative w-5 h-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                    </button>
+                  )}
 
                   {/* View Mode Toggle */}
                   {/* <button
@@ -1581,7 +1646,7 @@ export default function PhotoGallery() {
                 <div className="px-4 md:px-6 py-3 flex items-center gap-2 overflow-x-auto">
                   <div className="flex items-center gap-2 mr-2 shrink-0">
                     <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-1 rounded-xl">
-                      {selectedPhotos.size} Selected
+                      {activeTab === "videos" ? selectedVideoIds.length : selectedPhotos.size} Selected
                     </span>
                     <button
                       onClick={exitSelectionMode}
@@ -1596,42 +1661,60 @@ export default function PhotoGallery() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
                   >
                     <CheckSquare className="w-4 h-4" />
-                    {selectedPhotos.size === filteredPhotos.length
+                    {activeTab === "videos"
+                      ? selectedVideoIds.length === videos.length
+                        ? "Deselect All"
+                        : "Select All"
+                      : selectedPhotos.size === filteredPhotos.length
                       ? "Deselect All"
                       : "Select All"}
                   </button>
-                  {canBulkDownload && (
+                  {allowDownloading && canBulkDownload && (
                     <button
                       onClick={handleDownload}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
                     >
-                      {bulkDownloadLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                      {activeTab === "videos" ? (
+                        bulkVideoDownloadLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )
                       ) : (
-                        <Download className="w-4 h-4" />
+                        bulkDownloadLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )
                       )}
-                      {bulkDownloadLoading ? "Downloading..." : "Download"}
+                      {(activeTab === "videos" ? bulkVideoDownloadLoading : bulkDownloadLoading)
+                        ? "Downloading..."
+                        : "Download"}
                     </button>
                   )}
-                  <button
-                    onClick={handleFavorite}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
-                  >
-                    <Heart className="w-4 h-4" /> Favorite
-                  </button>
-                  <button
-                    onClick={handleUnfavorite}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
-                  >
-                    <HeartOff className="w-4 h-4 text-destructive" /> Unlike
-                  </button>
-                  {(hasPermission("delete_photos") || isTeamMember) && (
-                    <button
-                      onClick={handleDelete}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-destructive/10 transition-colors text-sm font-medium text-destructive whitespace-nowrap"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete
-                    </button>
+                  {activeTab !== "videos" && (
+                    <>
+                      <button
+                        onClick={handleFavorite}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
+                      >
+                        <Heart className="w-4 h-4" /> Favorite
+                      </button>
+                      <button
+                        onClick={handleUnfavorite}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-muted transition-colors text-sm font-medium whitespace-nowrap"
+                      >
+                        <HeartOff className="w-4 h-4 text-destructive" /> Unlike
+                      </button>
+                      {(hasPermission("delete_photos") || isTeamMember) && (
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-destructive/10 transition-colors text-sm font-medium text-destructive whitespace-nowrap"
+                        >
+                          <Trash2 className="w-4 h-4" /> Delete
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1685,16 +1768,42 @@ export default function PhotoGallery() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-              >
-                {videos.map((video, i) => (
-                  <motion.div
-                    key={video.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="group relative aspect-video rounded-2xl overflow-hidden bg-black border border-border cursor-pointer"
-                    onClick={() => setSelectedVideo(video.id)}
-                  >
+                >
+                {videos.map((video, i) => {
+                  const isSelected = selectedVideoIds.includes(video.id);
+                  return (
+                    <motion.div
+                      key={video.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      className={`group relative aspect-video rounded-2xl overflow-hidden bg-black border border-border cursor-pointer ${isSelected ? "ring-3 ring-primary" : ""}`}
+                      onClick={() => {
+                        if (selectionMode) {
+                          setSelectedVideoIds((prev) =>
+                            prev.includes(video.id)
+                              ? prev.filter((id) => id !== video.id)
+                              : [...prev, video.id]
+                          );
+                        } else {
+                          setSelectedVideo(video.id);
+                        }
+                      }}
+                    >
+                      <div
+                        className={`absolute inset-0 transition-colors ${isSelected ? "bg-primary/20" : "bg-foreground/0 group-hover:bg-foreground/20"} z-20 pointer-events-none`}
+                      />
+
+                      {selectionMode && (
+                        <div className="absolute top-2 left-2 z-30 pointer-events-none">
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-primary drop-shadow-lg" />
+                          ) : (
+                            <Square className="w-5 h-5 text-white drop-shadow-lg" />
+                          )}
+                        </div>
+                      )}
+
                     <video
                       src={video.url}
                       poster={video.thumbnail}
@@ -1718,12 +1827,12 @@ export default function PhotoGallery() {
                       href={video.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20"
+                      className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 backdrop-blur-md text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20 z-30"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </motion.div>
-                ))}
+                )})}
               </motion.div>
             )}
           </AnimatePresence>
@@ -2298,12 +2407,20 @@ export default function PhotoGallery() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-heading font-semibold mb-1">
-                    {selectedPhotos.size > 0
+                    {activeTab === "videos"
+                      ? selectedVideoIds.length > 0
+                        ? "Download Selected Videos?"
+                        : "Download All Videos?"
+                      : selectedPhotos.size > 0
                       ? "Download Selected Photos?"
                       : "Download All?"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPhotos.size > 0
+                    {activeTab === "videos"
+                      ? selectedVideoIds.length > 0
+                        ? `Are you sure you want to download ${selectedVideoIds.length} selected video(s)?`
+                        : `Are you sure you want to download all ${videos.length} video(s)? This may take a while.`
+                      : selectedPhotos.size > 0
                       ? `Are you sure you want to download ${selectedPhotos.size} selected photo(s)?`
                       : `Are you sure you want to download all ${localPhotos.length} photo(s) and video(s)? This may take a while.`}
                   </p>
@@ -2319,15 +2436,19 @@ export default function PhotoGallery() {
                 </button>
                 <button
                   onClick={confirmDownload}
-                  disabled={bulkDownloadLoading}
+                  disabled={activeTab === "videos" ? bulkVideoDownloadLoading : bulkDownloadLoading}
                   className="flex-1 px-4 py-2.5 rounded-xl fab-gradient text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-70"
                 >
-                  {bulkDownloadLoading ? (
+                  {(activeTab === "videos" ? bulkVideoDownloadLoading : bulkDownloadLoading) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Download className="w-4 h-4" />
                   )}
-                  {selectedPhotos.size > 0
+                  {activeTab === "videos"
+                    ? selectedVideoIds.length > 0
+                      ? "Download Selected"
+                      : "Download All"
+                    : selectedPhotos.size > 0
                     ? "Download Selected"
                     : "Download All"}
                 </button>

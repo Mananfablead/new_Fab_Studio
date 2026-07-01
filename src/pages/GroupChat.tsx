@@ -15,26 +15,26 @@ export default function GroupChat() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const [messageInput, setMessageInput] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{ url: string, name: string, type: 'image' | 'video' | 'document' } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ url: string, name: string, type: 'image' | 'video' | 'document', file: File } | null>(null);
   const [messages, setMessages] = useState<{
-    id: number, 
-    text?: string, 
+    id: number,
+    text?: string,
     time: string,
     sender_id?: number,
     receiver_id?: number,
-    file?: { url: string, name: string, type: 'image' | 'video' | 'document' }
+    file?: { url: string, name: string, type: 'image' | 'video' | 'document', file?: File }
   }[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredParticipants = conversations.filter((p) => {
     const isNotCurrentUser = String(p.id || p.user_id) !== String(currentUser?.id);
-    const matchesSearch = (p.firstName || p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (p.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (p.firstName || p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.email || "").toLowerCase().includes(searchQuery.toLowerCase());
     return isNotCurrentUser && matchesSearch;
   });
-  
+
   const [selectedParticipant, setSelectedParticipant] = useState<typeof filteredParticipants[0] | null>(null);
 
   useEffect(() => {
@@ -47,42 +47,82 @@ export default function GroupChat() {
     e.preventDefault();
     if (!messageInput.trim() && !selectedFile) return;
     
-    try {
-      await api.post('/chat/messages', {
-        receiver_id: selectedParticipant?.id || selectedParticipant?.user_id,
-        message: messageInput.trim()
-      });
-    } catch (error) {
-      console.error('Error sending message:', error);
-    }
-
-    setMessages([
-      ...messages, 
-      { 
-        id: Date.now(), 
-        text: messageInput.trim() || undefined, 
+    // Keep local refs
+    const currentInput = messageInput.trim();
+    const currentFile = selectedFile;
+    const tempId = Date.now();
+    
+    // Optimistic UI update
+    setMessages(prev => [
+      ...prev,
+      {
+        id: tempId,
+        text: currentInput || undefined,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         sender_id: Number(currentUser?.id),
         receiver_id: selectedParticipant?.id || selectedParticipant?.user_id,
-        file: selectedFile || undefined
+        file: currentFile || undefined
       }
     ]);
     setMessageInput("");
     setSelectedFile(null);
+    
+    try {
+      let response;
+      if (currentFile?.file) {
+        const formData = new FormData();
+        formData.append('receiver_id', String(selectedParticipant?.id || selectedParticipant?.user_id));
+        if (currentInput) {
+          formData.append('message', currentInput);
+        }
+        formData.append('attachment', currentFile.file);
+        
+        response = await api.post('/chat/messages', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        response = await api.post('/chat/messages', {
+          receiver_id: selectedParticipant?.id || selectedParticipant?.user_id,
+          message: currentInput
+        });
+      }
+
+      const msg = response.data?.data || response.data;
+      if (msg && msg.id) {
+        setMessages(prev => prev.map(m => m.id === tempId ? {
+          id: msg.id,
+          text: msg.message || undefined,
+          time: new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender_id: msg.sender_id,
+          receiver_id: msg.receiver_id,
+          file: msg.attachment_path ? {
+            url: msg.attachment_path,
+            name: msg.attachment_path.split('/').pop() || 'attachment',
+            type: msg.attachment_type === 'image' || msg.attachment_type === 'video' ? msg.attachment_type : 'document'
+          } : undefined
+        } : m));
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove optimistic message if it failed
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileType = file.type.startsWith('image/') ? 'image' 
-                   : file.type.startsWith('video/') ? 'video' 
-                   : 'document';
-    
+    const fileType = file.type.startsWith('image/') ? 'image'
+      : file.type.startsWith('video/') ? 'video'
+        : 'document';
+
     const fileUrl = URL.createObjectURL(file);
 
-    setSelectedFile({ url: fileUrl, name: file.name, type: fileType });
-    
+    setSelectedFile({ url: fileUrl, name: file.name, type: fileType, file });
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -123,12 +163,17 @@ export default function GroupChat() {
           const rawMessages = response.data?.data || response.data || [];
           const formattedMessages = rawMessages.map((msg: any) => ({
             id: msg.id,
-            text: msg.message,
+            text: msg.message || undefined,
             time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sender_id: msg.sender_id,
-            receiver_id: msg.receiver_id
+            receiver_id: msg.receiver_id,
+            file: msg.attachment_path ? {
+              url: msg.attachment_path,
+              name: msg.attachment_path.split('/').pop() || 'attachment',
+              type: msg.attachment_type === 'image' || msg.attachment_type === 'video' ? msg.attachment_type : 'document'
+            } : undefined
           }));
-          
+
           setMessages(prev => {
             // Only update if there's a difference to avoid resetting scroll position unnecessarily
             if (prev.length !== formattedMessages.length) return formattedMessages;
@@ -144,7 +189,7 @@ export default function GroupChat() {
     };
 
     fetchMessages();
-    
+
     if (selectedParticipant) {
       intervalId = setInterval(fetchMessages, 3000); // Poll every 3 seconds
     }
@@ -158,10 +203,10 @@ export default function GroupChat() {
     <div className="h-screen h-[100dvh] bg-[#f8fafc] flex flex-col overflow-hidden">
       <AppHeader />
       <div className="w-full px-4 md:px-8 lg:px-12 xl:px-16 py-4 md:py-6 flex-1 flex flex-col mx-auto max-w-[1600px] min-h-0">
-        
+
         {/* Main Content Area - Split View */}
         <div className="flex-1 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row min-h-0">
-          
+
           {/* Left Sidebar - Chat List / Participants */}
           <div className="w-full md:w-80 lg:w-[350px] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col bg-white shrink-0">
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
@@ -182,16 +227,16 @@ export default function GroupChat() {
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 pt-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search members..." 
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all shadow-sm" 
+                  placeholder="Search members..."
+                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all shadow-sm"
                 />
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
               {loading ? (
                 <div className="flex flex-col justify-center items-center h-40 gap-3">
@@ -206,14 +251,13 @@ export default function GroupChat() {
                 </div>
               ) : (
                 filteredParticipants.map((p) => (
-                  <div 
-                    key={p.id} 
+                  <div
+                    key={p.id}
                     onClick={() => setSelectedParticipant(p)}
-                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border group ${
-                      selectedParticipant?.id === p.id 
-                        ? 'bg-primary/5 border-primary/20 shadow-sm' 
+                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border group ${selectedParticipant?.id === p.id
+                        ? 'bg-primary/5 border-primary/20 shadow-sm'
                         : 'border-transparent hover:bg-slate-50 hover:border-slate-100'
-                    }`}
+                      }`}
                   >
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex-shrink-0 group-hover:scale-105 transition-transform">
                       {p.avatar ? (
@@ -230,12 +274,11 @@ export default function GroupChat() {
                       </h4>
                       <p className="text-xs text-slate-500 truncate">{p.email}</p>
                     </div>
-                    <div className={`px-2 py-1 text-[10px] rounded-lg font-bold uppercase tracking-wider shrink-0 ${
-                      p.role?.toLowerCase() === 'owner' ? 'bg-gradient-to-br from-[hsl(var(--fab-amber))] to-[hsl(var(--fab-navy))] text-white' :
-                      p.role?.toLowerCase() === 'admin' ? 'bg-[hsl(var(--fab-navy))]/10 text-[hsl(var(--fab-navy))]' :
-                      p.role?.toLowerCase() === 'user' ? 'bg-primary/10 text-primary' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>
+                    <div className={`px-2 py-1 text-[10px] rounded-lg font-bold uppercase tracking-wider shrink-0 ${p.role?.toLowerCase() === 'owner' ? 'bg-gradient-to-br from-[hsl(var(--fab-amber))] to-[hsl(var(--fab-navy))] text-white' :
+                        p.role?.toLowerCase() === 'admin' ? 'bg-[hsl(var(--fab-navy))]/10 text-[hsl(var(--fab-navy))]' :
+                          p.role?.toLowerCase() === 'user' ? 'bg-primary/10 text-primary' :
+                            'bg-slate-100 text-slate-600'
+                      }`}>
                       {p.role || 'Member'}
                     </div>
                   </div>
@@ -271,61 +314,59 @@ export default function GroupChat() {
                 )}
               </div>
             </div>
-            
+
             {/* Messages Area */}
             <div className={`flex-1 p-6 overflow-y-auto flex flex-col ${messages.length === 0 ? 'items-center justify-center' : 'gap-4'}`}>
-               {messages.length === 0 ? (
-                 <div className="text-center max-w-sm">
-                   <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-4">
-                     <MessageSquare className="w-8 h-8 text-slate-300" />
-                   </div>
-                   <h3 className="font-bold text-slate-900 mb-2 text-lg">
-                     {selectedParticipant ? `Say hi to ${selectedParticipant.firstName}!` : 'No messages yet'}
-                   </h3>
-                   <p className="text-sm text-slate-500">
-                     {selectedParticipant ? 'Start the conversation by sending a message.' : 'Select someone to start chatting.'}
-                   </p>
-                 </div>
-               ) : (
-                 messages.map((msg) => {
-                   const isSentByMe = String(msg.sender_id) === String(currentUser?.id);
-                   return (
-                   <div key={msg.id} className={`flex flex-col w-full ${isSentByMe ? 'items-end' : 'items-start'}`}>
-                     <div className={`rounded-2xl max-w-[85%] md:max-w-[70%] flex flex-col overflow-hidden ${isSentByMe ? 'rounded-tr-none text-white' : 'rounded-tl-none bg-slate-100 text-slate-800'} ${
-                       msg.file && !msg.text && (msg.file.type === 'image' || msg.file.type === 'video')
-                         ? 'bg-transparent shadow-sm'
-                         : (isSentByMe ? 'bg-primary p-1.5 shadow-sm' : 'p-1.5 shadow-sm')
-                     }`}>
-                       {msg.file && (
-                         <div className={`rounded-xl overflow-hidden flex flex-col justify-center ${msg.text ? 'mb-1.5' : ''} ${
-                           msg.file && !msg.text && (msg.file.type === 'image' || msg.file.type === 'video') ? 'border border-slate-200 bg-white' : 'bg-black/10'
-                         }`}>
-                           {msg.file.type === 'image' && (
-                             <img src={msg.file.url} alt={msg.file.name} className="w-full h-auto max-h-[300px] object-contain bg-white" />
-                           )}
-                           {msg.file.type === 'video' && (
-                             <video src={msg.file.url} controls className="w-full h-auto max-h-[300px] bg-black" />
-                           )}
-                           {msg.file.type === 'document' && (
-                             <div className="flex items-center gap-3 p-4">
-                               <FileText className="w-8 h-8 shrink-0 text-white/80" />
-                               <span className="text-sm font-medium truncate max-w-[150px]">{msg.file.name}</span>
-                             </div>
-                           )}
-                         </div>
-                       )}
-                       {msg.text && (
-                         <p className="text-sm px-2.5 py-1">{msg.text}</p>
-                       )}
-                     </div>
-                     <span className={`text-[10px] text-slate-400 mt-1 ${isSentByMe ? 'mr-1' : 'ml-1'}`}>{msg.time}</span>
-                   </div>
-                   );
-                 })
-               )}
-               <div ref={messagesEndRef} />
+              {messages.length === 0 ? (
+                <div className="text-center max-w-sm">
+                  <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="w-8 h-8 text-slate-300" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 mb-2 text-lg">
+                    {selectedParticipant ? `Say hi to ${selectedParticipant.firstName}!` : 'No messages yet'}
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    {selectedParticipant ? 'Start the conversation by sending a message.' : 'Select someone to start chatting.'}
+                  </p>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isSentByMe = String(msg.sender_id) === String(currentUser?.id);
+                  return (
+                    <div key={msg.id} className={`flex flex-col w-full ${isSentByMe ? 'items-end' : 'items-start'}`}>
+                      <div className={`rounded-2xl max-w-[85%] md:max-w-[70%] flex flex-col overflow-hidden ${isSentByMe ? 'rounded-tr-none text-white' : 'rounded-tl-none bg-slate-100 text-slate-800'} ${msg.file && !msg.text && (msg.file.type === 'image' || msg.file.type === 'video')
+                          ? 'bg-transparent shadow-sm'
+                          : (isSentByMe ? 'bg-primary p-1.5 shadow-sm' : 'p-1.5 shadow-sm')
+                        }`}>
+                        {msg.file && (
+                          <div className={`rounded-xl overflow-hidden flex flex-col justify-center ${msg.text ? 'mb-1.5' : ''} ${msg.file && !msg.text && (msg.file.type === 'image' || msg.file.type === 'video') ? 'border border-slate-200 bg-white' : 'bg-black/10'
+                            }`}>
+                            {msg.file.type === 'image' && (
+                              <img src={msg.file.url} alt={msg.file.name} className="w-full h-auto max-h-[300px] object-contain bg-white" />
+                            )}
+                            {msg.file.type === 'video' && (
+                              <video src={msg.file.url} controls className="w-full h-auto max-h-[300px] bg-black" />
+                            )}
+                            {msg.file.type === 'document' && (
+                              <div className="flex items-center gap-3 p-4">
+                                <FileText className="w-8 h-8 shrink-0 text-white/80" />
+                                <span className="text-sm font-medium truncate max-w-[150px]">{msg.file.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {msg.text && (
+                          <p className="text-sm px-2.5 py-1">{msg.text}</p>
+                        )}
+                      </div>
+                      <span className={`text-[10px] text-slate-400 mt-1 ${isSentByMe ? 'mr-1' : 'ml-1'}`}>{msg.time}</span>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
             </div>
-            
+
             {/* Input Area */}
             <div className="p-4 bg-white border-t border-slate-200 shrink-0 pr-20 lg:pr-24 relative">
               {selectedFile && (
@@ -343,8 +384,8 @@ export default function GroupChat() {
                     <p className="text-xs font-bold text-slate-700 truncate">{selectedFile.name}</p>
                     <p className="text-[10px] text-slate-500 uppercase">{selectedFile.type}</p>
                   </div>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setSelectedFile(null)}
                     className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-red-100 hover:text-red-500 transition-colors"
                   >
@@ -353,7 +394,6 @@ export default function GroupChat() {
                 </div>
               )}
               <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-                {/* 
                 <input 
                   type="file"
                   ref={fileInputRef}
@@ -369,26 +409,25 @@ export default function GroupChat() {
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
-                */}
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   placeholder={selectedParticipant ? `Type your message to ${selectedParticipant.firstName}...` : "Type your message..."}
                   disabled={!selectedParticipant}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all shadow-sm min-w-0 disabled:opacity-50"
                 />
-                <button 
+                <button
                   type="submit"
                   disabled={(!messageInput.trim() && !selectedFile) || !selectedParticipant}
-                  className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 shrink-0" 
+                  className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 shrink-0"
                 >
                   <Send className="w-5 h-5 ml-1" />
                 </button>
               </form>
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>
