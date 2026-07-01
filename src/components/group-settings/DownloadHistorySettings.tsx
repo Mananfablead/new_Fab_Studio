@@ -49,6 +49,8 @@ interface DownloadRecord {
     size: number;
     url: string;
   };
+  photos?: any[];
+  videos?: any[];
 }
 
 interface Summary {
@@ -350,25 +352,82 @@ export default function DownloadHistorySettings() {
                         </TableCell>
                       </TableRow>
                       {/* Expandable Row */}
-                      {expandedRowId === record.id && fileObj && (
+                      {expandedRowId === record.id && (
                         <TableRow className="bg-muted/10 border-b border-border/50">
                           <TableCell colSpan={5} className="py-3 px-6">
-                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-lg border border-border/50">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden border border-border/50">
-                                  {fileObj.url ? (
-                                    <img src={fileObj.url} alt={fileObj.original_name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <FileText className="w-5 h-5 text-muted-foreground" />
+                            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2">
+                              {/* Single file view */}
+                              {fileObj && (
+                                <div className="flex items-center justify-between bg-white/50 p-3 rounded-lg border border-border/50">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden border border-border/50">
+                                      {record.file_type === 'video' && fileObj.url ? (
+                                        <video src={fileObj.url} className="w-full h-full object-cover" />
+                                      ) : fileObj.url ? (
+                                        <img src={fileObj.url} alt={fileObj.original_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <FileText className="w-5 h-5 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-medium text-foreground truncate">
+                                      {fileObj.original_name}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground font-medium whitespace-nowrap ml-4">
+                                    {formatSize(fileObj.size)}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Bulk files view (Photos) */}
+                              {record.photos && record.photos.length > 0 && record.photos.map((photo: any) => (
+                                <div key={`photo-${photo.id}`} className="flex items-center justify-between bg-white/50 p-3 rounded-lg border border-border/50">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden border border-border/50">
+                                      {photo.url ? (
+                                        <img src={photo.url} alt={photo.original_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-medium text-foreground truncate">
+                                      {photo.original_name}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground font-medium whitespace-nowrap ml-4">
+                                    {formatSize(photo.size)}
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Bulk files view (Videos) */}
+                              {record.videos && record.videos.length > 0 && record.videos.map((video: any) => (
+                                <div key={`video-${video.id}`} className="flex items-center justify-between bg-white/50 p-3 rounded-lg border border-border/50">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0 overflow-hidden border border-border/50">
+                                      {video.url ? (
+                                        <video src={video.url} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Video className="w-5 h-5 text-muted-foreground" />
+                                      )}
+                                    </div>
+                                    <div className="text-sm font-medium text-foreground truncate">
+                                      {video.original_name || `Video ${video.id}`}
+                                    </div>
+                                  </div>
+                                  {video.size && (
+                                    <div className="text-xs text-muted-foreground font-medium whitespace-nowrap ml-4">
+                                      {formatSize(video.size)}
+                                    </div>
                                   )}
                                 </div>
-                                <div className="text-sm font-medium text-foreground truncate">
-                                  {fileObj.original_name}
+                              ))}
+                              
+                              {!fileObj && (!record.photos || record.photos.length === 0) && (!record.videos || record.videos.length === 0) && (
+                                <div className="text-center text-sm text-muted-foreground py-2">
+                                  No files available for this bulk download.
                                 </div>
-                              </div>
-                              <div className="text-xs text-muted-foreground font-medium whitespace-nowrap ml-4">
-                                {formatSize(fileObj.size)}
-                              </div>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
